@@ -1,0 +1,67 @@
+import { useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+
+function Login() {
+  const { login } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [form, setForm] = useState({ email: '', password: '' })
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    setError('')
+    if (!form.email.includes('@') || !form.password) {
+      setError('Enter a valid email and password.')
+      return
+    }
+    setLoading(true)
+    try {
+      await login(form)
+      navigate(location.state?.from?.pathname || '/profile', { replace: true })
+    } catch (err) {
+      setError(err.message || 'Login failed. Check your credentials.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <section className="section">
+      <div className="container" style={{ maxWidth: '520px' }}>
+        <form className="form-card" onSubmit={handleSubmit}>
+          <h3 style={{ marginTop: 0 }}>Welcome Back</h3>
+          <label className="form-label">Email</label>
+          <input
+            className="input"
+            type="email"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            placeholder="you@example.com"
+          />
+          <label className="form-label" style={{ marginTop: '16px' }}>
+            Password
+          </label>
+          <input
+            className="input"
+            type="password"
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            placeholder="********"
+          />
+          {error && <div className="form-error">{error}</div>}
+          <button className="btn" type="submit" disabled={loading}>
+            {loading ? 'Signing in...' : 'Login'}
+          </button>
+          <p style={{ marginTop: '16px', color: 'var(--text-400)' }}>
+            No account? <Link to="/register">Create one</Link>
+          </p>
+        </form>
+      </div>
+    </section>
+  )
+}
+
+export default Login
