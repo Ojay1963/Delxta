@@ -17,9 +17,17 @@ const ensureAdminUser = require('./utils/ensureAdminUser')
 dotenv.config()
 
 const app = express()
-const port = process.env.PORT || 5000
+const PORT = process.env.PORT || 5000
 
-app.use(cors())
+app.use(
+  cors({
+    origin: [
+      'http://localhost:5173',
+      'https://delxta.vercel.app'
+    ],
+    credentials: true
+  })
+)
 app.use(express.json())
 app.use(morgan('dev'))
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')))
@@ -49,8 +57,8 @@ mongoose
   .then(async () => {
     await seedDatabase()
     await ensureAdminUser()
-    app.listen(port, () => {
-      console.log(`Server running on http://localhost:${port}`)
+    app.listen(PORT, () => {
+      console.log(`Server running on ${PORT}`)
     })
   })
   .catch((error) => {
