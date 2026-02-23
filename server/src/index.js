@@ -14,7 +14,7 @@ const errorHandler = require('./middleware/error')
 const seedDatabase = require('./utils/seed')
 const ensureAdminUser = require('./utils/ensureAdminUser')
 
-dotenv.config()
+dotenv.config({ path: path.resolve(__dirname, '..', '.env') })
 
 const app = express()
 const PORT = process.env.PORT || 5000

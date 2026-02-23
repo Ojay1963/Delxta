@@ -283,7 +283,7 @@ function Home() {
 
       <a
         className="whatsapp-float"
-        href="https://wa.me/2348000000000"
+        href="https://wa.me/2347082206013"
         target="_blank"
         rel="noreferrer"
         aria-label="Chat with Delxta on WhatsApp"
