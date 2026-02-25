@@ -39,6 +39,13 @@ export function AuthProvider({ children }) {
     })
   }
 
+  const resendVerificationEmail = async (email) => {
+    return apiRequest('/api/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    })
+  }
+
   const refreshUser = async () => {
     if (!token) return null
     const data = await apiRequest('/api/auth/me', {
@@ -66,7 +73,17 @@ export function AuthProvider({ children }) {
   }
 
   const value = useMemo(
-    () => ({ token, user, loading, login, register, logout, refreshUser, updateProfile }),
+    () => ({
+      token,
+      user,
+      loading,
+      login,
+      register,
+      resendVerificationEmail,
+      logout,
+      refreshUser,
+      updateProfile,
+    }),
     [token, user, loading]
   )
 

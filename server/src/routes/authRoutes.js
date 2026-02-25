@@ -6,6 +6,7 @@ const {
   updateMe,
   updateAvatar,
   verifyEmail,
+  resendVerificationEmail,
   getDashboard,
 } = require('../controllers/authController')
 const { auth } = require('../middleware/auth')
@@ -15,6 +16,7 @@ const router = express.Router()
 
 router.post('/register', register)
 router.post('/login', login)
+router.post('/resend-verification', resendVerificationEmail)
 router.get('/me', auth, me)
 router.put('/me', auth, updateMe)
 router.post('/avatar', auth, uploadAvatar, updateAvatar)

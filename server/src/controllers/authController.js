@@ -26,39 +26,96 @@ const createToken = (user) =>
     expiresIn: '7d',
   })
 
+const isEmailVerificationRequired = () => process.env.REQUIRE_EMAIL_VERIFICATION === 'true'
+
+const issueEmailVerification = async (user) => {
+  const verifyToken = crypto.randomBytes(32).toString('hex')
+  const verifyTokenHash = crypto.createHash('sha256').update(verifyToken).digest('hex')
+
+  user.emailVerificationToken = verifyTokenHash
+  user.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000
+  await user.save()
+
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173'
+  const verifyUrl = `${clientUrl}/verify-email?token=${verifyToken}`
+
+  await sendEmail({
+    to: user.email,
+    subject: 'Verify your Delxta account',
+    html: `<p>Hi ${user.name}, click <a href="${verifyUrl}">here</a> to verify your email.</p>`,
+  })
+
+  return verifyUrl
+}
+
 const register = async (req, res, next) => {
   try {
     const { name, email, password } = req.body
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'All fields are required.' })
     }
-    const existing = await User.findOne({ email })
-    if (existing) {
-      return res.status(409).json({ message: 'Email already in use.' })
+    const normalizedEmail = String(email).trim().toLowerCase()
+    const existing = await User.findOne({ email: normalizedEmail })
+
+    if (!isEmailVerificationRequired()) {
+      if (existing) {
+        if (existing.isEmailVerified) {
+          return res.status(409).json({ message: 'Email already in use.' })
+        }
+
+        existing.name = name
+        existing.password = password
+        existing.isEmailVerified = true
+        existing.emailVerificationToken = undefined
+        existing.emailVerificationExpires = undefined
+        await existing.save()
+
+        return res.status(200).json({
+          message: 'Registration successful. You can sign in now.',
+        })
+      }
+
+      await User.create({
+        name,
+        email: normalizedEmail,
+        password,
+        isEmailVerified: true,
+      })
+
+      return res.status(201).json({
+        message: 'Registration successful. You can sign in now.',
+      })
     }
-    const user = await User.create({ name, email, password })
-    const verifyToken = crypto.randomBytes(32).toString('hex')
-    const verifyTokenHash = crypto.createHash('sha256').update(verifyToken).digest('hex')
 
-    user.emailVerificationToken = verifyTokenHash
-    user.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000
-    await user.save()
+    if (existing) {
+      if (existing.isEmailVerified) {
+        return res.status(409).json({ message: 'Email already in use.' })
+      }
 
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173'
-    const verifyUrl = `${clientUrl}/verify-email?token=${verifyToken}`
+      existing.name = name
+      existing.password = password
+      const verificationUrl = await issueEmailVerification(existing)
 
-    await sendEmail({
-      to: user.email,
-      subject: 'Verify your Delxta account',
-      html: `<p>Hi ${user.name}, click <a href="${verifyUrl}">here</a> to verify your email.</p>`,
-    })
+      const response = {
+        message:
+          'An account with this email is pending verification. We sent a new verification link.',
+      }
+
+      if (!process.env.SMTP_HOST && process.env.NODE_ENV !== 'production') {
+        response.verificationUrl = verificationUrl
+      }
+
+      return res.status(200).json(response)
+    }
+    const user = await User.create({ name, email: normalizedEmail, password })
+    const verificationUrl = await issueEmailVerification(user)
 
     const response = {
       message: 'Registration successful. Please verify your email before signing in.',
     }
 
     if (!process.env.SMTP_HOST && process.env.NODE_ENV !== 'production') {
-      response.verificationUrl = verifyUrl
+      response.verificationUrl = verificationUrl
     }
 
     return res.status(201).json(response)
@@ -80,6 +137,12 @@ const login = async (req, res, next) => {
     const isMatch = await user.comparePassword(password)
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid credentials.' })
+    }
+    if (isEmailVerificationRequired() && !user.isEmailVerified) {
+      return res.status(403).json({
+        message: 'Please verify your email before signing in.',
+        code: 'EMAIL_NOT_VERIFIED',
+      })
     }
     const token = createToken(user)
     return res.json({
@@ -198,6 +261,38 @@ const verifyEmail = async (req, res, next) => {
   }
 }
 
+const resendVerificationEmail = async (req, res, next) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase()
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required.' })
+    }
+
+    const user = await User.findOne({ email })
+    if (!user) {
+      return res.status(404).json({ message: 'No account found for that email.' })
+    }
+
+    if (user.isEmailVerified) {
+      return res.status(400).json({
+        message: 'This email is already verified. You can sign in.',
+        code: 'EMAIL_ALREADY_VERIFIED',
+      })
+    }
+
+    const verificationUrl = await issueEmailVerification(user)
+    const response = { message: 'Verification email sent. Please check your inbox.' }
+
+    if (!process.env.SMTP_HOST && process.env.NODE_ENV !== 'production') {
+      response.verificationUrl = verificationUrl
+    }
+
+    return res.json(response)
+  } catch (error) {
+    return next(error)
+  }
+}
+
 const getDashboard = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id).select('-password')
@@ -283,4 +378,13 @@ const getDashboard = async (req, res, next) => {
   }
 }
 
-module.exports = { register, login, me, updateMe, updateAvatar, verifyEmail, getDashboard }
+module.exports = {
+  register,
+  login,
+  me,
+  updateMe,
+  updateAvatar,
+  verifyEmail,
+  resendVerificationEmail,
+  getDashboard,
+}
