@@ -3,6 +3,7 @@ import { NavLink, Link } from 'react-router-dom'
 import { FiMenu, FiX } from 'react-icons/fi'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
+import brandLogoSrc from '../images/DELXTA_NO_BACKGROUND.jpg'
 
 const navItems = [
   { label: 'Home', path: '/' },
@@ -14,6 +15,7 @@ const navItems = [
 
 function Header() {
   const [open, setOpen] = useState(false)
+  const [logoLoadFailed, setLogoLoadFailed] = useState(false)
   const { user, logout } = useAuth()
   const { itemCount } = useCart()
 
@@ -23,8 +25,16 @@ function Header() {
   return (
     <header className="header">
       <div className="container nav">
-        <Link to="/" className="logo-text">
-          Delxta
+        <Link to="/" className="logo-text brand-link" aria-label="Delxta home">
+          {!logoLoadFailed && (
+            <img
+              src={brandLogoSrc}
+              alt="Delxta"
+              className="brand-logo-image"
+              onError={() => setLogoLoadFailed(true)}
+            />
+          )}
+          <span className="brand-logo-fallback">Delxta</span>
         </Link>
         <nav className="nav-links">
           {navItems.map((item) => (
