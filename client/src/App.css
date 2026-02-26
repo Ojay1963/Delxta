@@ -648,6 +648,15 @@
   flex-wrap: wrap;
 }
 
+.contact-brand-logo {
+  display: block;
+  width: min(260px, 100%);
+  height: auto;
+  margin: 0 0 18px;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.3));
+}
+
 .contact-social a {
   width: 40px;
   height: 40px;

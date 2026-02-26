@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { apiRequest } from '../utils/api'
 import { FiFacebook, FiInstagram, FiYoutube } from 'react-icons/fi'
 import { FaXTwitter, FaTiktok } from 'react-icons/fa6'
+import brandLogoSrc from '../images/DELXTA_NO_BACKGROUND.jpg'
 
 const initialState = {
   name: '',
@@ -53,6 +54,7 @@ function Contact() {
             our team will respond promptly.
           </p>
           <div className="panel" style={{ marginTop: '24px' }}>
+            <img src={brandLogoSrc} alt="Delxta logo" className="contact-brand-logo" />
             <p>Block 12, Plot 4 Admiralty Way, Lekki Phase 1, Lagos State, Nigeria</p>
             <p>hello@delxta.com</p>
             <p>+234 800 000 0000</p>
