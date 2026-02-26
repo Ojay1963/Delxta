@@ -31,6 +31,7 @@ function OrderCheckout() {
   const navigate = useNavigate()
   const [form, setForm] = useState(initialForm)
   const [cardDetails, setCardDetails] = useState(initialCardDetails)
+  const [showCvv, setShowCvv] = useState(false)
   const [errors, setErrors] = useState({})
   const [status, setStatus] = useState('idle')
   const isSubmittingRef = useRef(false)
@@ -363,15 +364,36 @@ function OrderCheckout() {
                   </div>
                   <div>
                     <label className="form-label">CVV</label>
-                    <input
-                      className="input"
-                      type="password"
-                      value={cardDetails.cvv}
-                      onChange={(e) => setCardDetails({ ...cardDetails, cvv: e.target.value })}
-                      placeholder="123"
-                      inputMode="numeric"
-                      maxLength={4}
-                    />
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        className="input"
+                        type={showCvv ? 'text' : 'password'}
+                        value={cardDetails.cvv}
+                        onChange={(e) => setCardDetails({ ...cardDetails, cvv: e.target.value })}
+                        placeholder="123"
+                        inputMode="numeric"
+                        maxLength={4}
+                        style={{ paddingRight: '68px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCvv((prev) => !prev)}
+                        aria-label={showCvv ? 'Hide CVV' : 'Show CVV'}
+                        style={{
+                          position: 'absolute',
+                          right: '10px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          border: 'none',
+                          background: 'transparent',
+                          color: 'var(--text-300)',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {showCvv ? 'Hide' : 'Show'}
+                      </button>
+                    </div>
                     {errors.cvv && <div className="form-error">{errors.cvv}</div>}
                   </div>
                 </div>

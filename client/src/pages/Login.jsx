@@ -13,6 +13,7 @@ function Login() {
   const [verificationOtp, setVerificationOtp] = useState('')
   const [showResend, setShowResend] = useState(false)
   const [resending, setResending] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (event) => {
@@ -82,13 +83,34 @@ function Login() {
           <label className="form-label" style={{ marginTop: '16px' }}>
             Password
           </label>
-          <input
-            className="input"
-            type="password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            placeholder="********"
-          />
+          <div style={{ position: 'relative' }}>
+            <input
+              className="input"
+              type={showPassword ? 'text' : 'password'}
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              placeholder="********"
+              style={{ paddingRight: '68px' }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              style={{
+                position: 'absolute',
+                right: '10px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--text-300)',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
+          </div>
           {error && <div className="form-error">{error}</div>}
           {info && <div className="form-success">{info}</div>}
           {verificationUrl && (

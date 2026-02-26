@@ -11,6 +11,7 @@ function Register() {
   const [verificationUrl, setVerificationUrl] = useState('')
   const [verificationOtp, setVerificationOtp] = useState('')
   const [verificationEmail, setVerificationEmail] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (event) => {
@@ -76,13 +77,34 @@ function Register() {
           <label className="form-label" style={{ marginTop: '16px' }}>
             Password
           </label>
-          <input
-            className="input"
-            type="password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            placeholder="Create a password"
-          />
+          <div style={{ position: 'relative' }}>
+            <input
+              className="input"
+              type={showPassword ? 'text' : 'password'}
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              placeholder="Create a password"
+              style={{ paddingRight: '68px' }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              style={{
+                position: 'absolute',
+                right: '10px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--text-300)',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
+          </div>
           {error && <div className="form-error">{error}</div>}
           {success && <div className="form-success">{success}</div>}
           {verificationEmail && (
