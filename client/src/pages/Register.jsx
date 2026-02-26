@@ -99,10 +99,32 @@ function Register() {
                 background: 'transparent',
                 color: 'var(--text-300)',
                 cursor: 'pointer',
-                fontWeight: 600,
+                padding: 0,
+                lineHeight: 0,
               }}
             >
-              {showPassword ? 'Hide' : 'Show'}
+              {showPassword ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M3 3L21 21M10.58 10.58C10.21 10.95 10 11.46 10 12C10 13.1 10.9 14 12 14C12.54 14 13.05 13.79 13.42 13.42M9.88 5.09C10.56 4.86 11.27 4.75 12 4.75C17.25 4.75 21 12 21 12C20.43 13.06 19.71 14.03 18.88 14.88M6.61 6.61C4.48 8.12 3 10.5 3 12C3 12 6.75 19.25 12 19.25C13.5 19.25 14.91 18.95 16.19 18.42"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M1.5 12S5.5 4.5 12 4.5S22.5 12 22.5 12S18.5 19.5 12 19.5S1.5 12 1.5 12Z"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
+                </svg>
+              )}
             </button>
           </div>
           {error && <div className="form-error">{error}</div>}
