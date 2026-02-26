@@ -28,24 +28,37 @@ const createToken = (user) =>
 
 const isEmailVerificationRequired = () => process.env.REQUIRE_EMAIL_VERIFICATION === 'true'
 
-const issueEmailVerification = async (user) => {
-  const verifyToken = crypto.randomBytes(32).toString('hex')
-  const verifyTokenHash = crypto.createHash('sha256').update(verifyToken).digest('hex')
+const generateEmailOtp = () => String(Math.floor(100000 + Math.random() * 900000))
 
-  user.emailVerificationToken = verifyTokenHash
-  user.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000
+const hashOtp = (otp) => crypto.createHash('sha256').update(String(otp)).digest('hex')
+
+const issueEmailVerificationOtp = async (user) => {
+  const otp = generateEmailOtp()
+
+  user.emailVerificationOtpHash = hashOtp(otp)
+  user.emailVerificationOtpExpires = Date.now() + 10 * 60 * 1000
+  user.emailVerificationOtpAttempts = 0
+  user.emailVerificationToken = undefined
+  user.emailVerificationExpires = undefined
   await user.save()
-
-  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173'
-  const verifyUrl = `${clientUrl}/verify-email?token=${verifyToken}`
 
   await sendEmail({
     to: user.email,
-    subject: 'Verify your Delxta account',
-    html: `<p>Hi ${user.name}, click <a href="${verifyUrl}">here</a> to verify your email.</p>`,
+    subject: 'Your Delxta verification code',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto;">
+        <h2 style="margin-bottom: 8px;">Verify your email</h2>
+        <p style="margin-top: 0;">Hi ${user.name || 'there'}, use this one-time code to verify your Delxta account.</p>
+        <div style="background:#13b4ff; color:#fff; padding:16px 20px; border-radius:8px; text-align:center; letter-spacing:6px; font-size:28px; font-weight:700;">
+          ${otp}
+        </div>
+        <p style="margin-top: 14px;">This code expires in 10 minutes.</p>
+      </div>
+    `,
+    text: `Your Delxta verification code is ${otp}. It expires in 10 minutes.`,
   })
 
-  return verifyUrl
+  return otp
 }
 
 const register = async (req, res, next) => {
@@ -94,28 +107,40 @@ const register = async (req, res, next) => {
 
       existing.name = name
       existing.password = password
-      const verificationUrl = await issueEmailVerification(existing)
+      const verificationOtp = await issueEmailVerificationOtp(existing)
 
       const response = {
         message:
-          'An account with this email is pending verification. We sent a new verification link.',
+          'An account with this email is pending verification. We sent a new OTP code.',
+        verificationMethod: 'otp',
+        email: existing.email,
       }
 
-      if (!process.env.SMTP_HOST && process.env.NODE_ENV !== 'production') {
-        response.verificationUrl = verificationUrl
+      if (
+        !process.env.SMTP_HOST &&
+        !process.env.EMAIL &&
+        process.env.NODE_ENV !== 'production'
+      ) {
+        response.verificationOtp = verificationOtp
       }
 
       return res.status(200).json(response)
     }
     const user = await User.create({ name, email: normalizedEmail, password })
-    const verificationUrl = await issueEmailVerification(user)
+    const verificationOtp = await issueEmailVerificationOtp(user)
 
     const response = {
-      message: 'Registration successful. Please verify your email before signing in.',
+      message: 'Registration successful. Please verify your email with the OTP sent.',
+      verificationMethod: 'otp',
+      email: user.email,
     }
 
-    if (!process.env.SMTP_HOST && process.env.NODE_ENV !== 'production') {
-      response.verificationUrl = verificationUrl
+    if (
+      !process.env.SMTP_HOST &&
+      !process.env.EMAIL &&
+      process.env.NODE_ENV !== 'production'
+    ) {
+      response.verificationOtp = verificationOtp
     }
 
     return res.status(201).json(response)
@@ -253,6 +278,78 @@ const verifyEmail = async (req, res, next) => {
     user.isEmailVerified = true
     user.emailVerificationToken = undefined
     user.emailVerificationExpires = undefined
+    user.emailVerificationOtpHash = undefined
+    user.emailVerificationOtpExpires = undefined
+    user.emailVerificationOtpAttempts = 0
+    await user.save()
+
+    return res.json({ message: 'Email verified successfully. You can now sign in.' })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+const verifyEmailOtp = async (req, res, next) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase()
+    const otp = String(req.body?.otp || '').trim()
+
+    if (!email || !otp) {
+      return res.status(400).json({ message: 'Email and OTP are required.' })
+    }
+
+    const user = await User.findOne({ email }).select(
+      '+emailVerificationOtpHash +emailVerificationOtpExpires +emailVerificationOtpAttempts'
+    )
+
+    if (!user) {
+      return res.status(404).json({ message: 'No account found for that email.' })
+    }
+
+    if (user.isEmailVerified) {
+      return res.status(400).json({
+        message: 'This email is already verified. You can sign in.',
+        code: 'EMAIL_ALREADY_VERIFIED',
+      })
+    }
+
+    if (!user.emailVerificationOtpHash || !user.emailVerificationOtpExpires) {
+      return res.status(400).json({
+        message: 'No OTP is active for this email. Request a new verification code.',
+        code: 'OTP_NOT_REQUESTED',
+      })
+    }
+
+    if (user.emailVerificationOtpExpires <= new Date()) {
+      return res.status(400).json({
+        message: 'OTP has expired. Request a new verification code.',
+        code: 'OTP_EXPIRED',
+      })
+    }
+
+    if ((user.emailVerificationOtpAttempts || 0) >= 5) {
+      return res.status(429).json({
+        message: 'Too many incorrect OTP attempts. Request a new verification code.',
+        code: 'OTP_ATTEMPTS_EXCEEDED',
+      })
+    }
+
+    const isMatch = user.emailVerificationOtpHash === hashOtp(otp)
+    if (!isMatch) {
+      user.emailVerificationOtpAttempts = (user.emailVerificationOtpAttempts || 0) + 1
+      await user.save()
+      return res.status(400).json({
+        message: 'Invalid OTP code.',
+        code: 'OTP_INVALID',
+      })
+    }
+
+    user.isEmailVerified = true
+    user.emailVerificationOtpHash = undefined
+    user.emailVerificationOtpExpires = undefined
+    user.emailVerificationOtpAttempts = 0
+    user.emailVerificationToken = undefined
+    user.emailVerificationExpires = undefined
     await user.save()
 
     return res.json({ message: 'Email verified successfully. You can now sign in.' })
@@ -280,11 +377,19 @@ const resendVerificationEmail = async (req, res, next) => {
       })
     }
 
-    const verificationUrl = await issueEmailVerification(user)
-    const response = { message: 'Verification email sent. Please check your inbox.' }
+    const verificationOtp = await issueEmailVerificationOtp(user)
+    const response = {
+      message: 'Verification OTP sent. Please check your inbox.',
+      verificationMethod: 'otp',
+      email: user.email,
+    }
 
-    if (!process.env.SMTP_HOST && process.env.NODE_ENV !== 'production') {
-      response.verificationUrl = verificationUrl
+    if (
+      !process.env.SMTP_HOST &&
+      !process.env.EMAIL &&
+      process.env.NODE_ENV !== 'production'
+    ) {
+      response.verificationOtp = verificationOtp
     }
 
     return res.json(response)
@@ -385,6 +490,7 @@ module.exports = {
   updateMe,
   updateAvatar,
   verifyEmail,
+  verifyEmailOtp,
   resendVerificationEmail,
   getDashboard,
 }

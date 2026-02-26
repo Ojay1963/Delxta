@@ -10,6 +10,7 @@ function Login() {
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [verificationUrl, setVerificationUrl] = useState('')
+  const [verificationOtp, setVerificationOtp] = useState('')
   const [showResend, setShowResend] = useState(false)
   const [resending, setResending] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -42,6 +43,7 @@ function Login() {
     setError('')
     setInfo('')
     setVerificationUrl('')
+    setVerificationOtp('')
     if (!form.email.includes('@')) {
       setError('Enter the email you used to register.')
       return
@@ -50,12 +52,15 @@ function Login() {
     setResending(true)
     try {
       const data = await resendVerificationEmail(form.email)
-      setInfo(data?.message || 'Verification email sent.')
+      setInfo(data?.message || 'Verification OTP sent.')
       if (data?.verificationUrl) {
         setVerificationUrl(data.verificationUrl)
       }
+      if (data?.verificationOtp) {
+        setVerificationOtp(data.verificationOtp)
+      }
     } catch (err) {
-      setError(err.message || 'Could not resend verification email.')
+      setError(err.message || 'Could not resend verification OTP.')
     } finally {
       setResending(false)
     }
@@ -91,16 +96,25 @@ function Login() {
               Dev link: <a href={verificationUrl}>Verify email now</a>
             </p>
           )}
+          {verificationOtp && (
+            <p style={{ marginTop: '12px' }}>Dev OTP: <strong>{verificationOtp}</strong></p>
+          )}
           {showResend && (
-            <button
-              className="btn"
-              type="button"
-              onClick={handleResendVerification}
-              disabled={resending}
-              style={{ marginBottom: '12px', background: 'transparent', color: 'var(--text-100)' }}
-            >
-              {resending ? 'Sending verification...' : 'Resend verification email'}
-            </button>
+            <>
+              <p style={{ marginTop: '12px' }}>
+                Enter your code here:{' '}
+                <Link to={`/verify-email?email=${encodeURIComponent(form.email)}`}>Verify Email</Link>
+              </p>
+              <button
+                className="btn"
+                type="button"
+                onClick={handleResendVerification}
+                disabled={resending}
+                style={{ marginBottom: '12px', background: 'transparent', color: 'var(--text-100)' }}
+              >
+                {resending ? 'Sending OTP...' : 'Resend verification OTP'}
+              </button>
+            </>
           )}
           <button className="btn" type="submit" disabled={loading}>
             {loading ? 'Signing in...' : 'Login'}

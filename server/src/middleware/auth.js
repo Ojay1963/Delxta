@@ -1,6 +1,9 @@
 const jwt = require('jsonwebtoken')
+const User = require('../models/User')
 
-const auth = (req, res, next) => {
+const isEmailVerificationRequired = () => process.env.REQUIRE_EMAIL_VERIFICATION === 'true'
+
+const auth = async (req, res, next) => {
   const authHeader = req.headers.authorization
   if (!authHeader) {
     return res.status(401).json({ message: 'Missing authorization header.' })
@@ -13,6 +16,22 @@ const auth = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
+
+    if (isEmailVerificationRequired()) {
+      const user = await User.findById(decoded.id).select('isEmailVerified role')
+      if (!user) {
+        return res.status(401).json({ message: 'User not found.' })
+      }
+      if (!user.isEmailVerified) {
+        return res.status(403).json({
+          message: 'Please verify your email before signing in.',
+          code: 'EMAIL_NOT_VERIFIED',
+        })
+      }
+      req.user = { ...decoded, role: user.role }
+      return next()
+    }
+
     req.user = decoded
     return next()
   } catch (error) {

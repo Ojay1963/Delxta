@@ -6,6 +6,7 @@ const {
   updateMe,
   updateAvatar,
   verifyEmail,
+  verifyEmailOtp,
   resendVerificationEmail,
   getDashboard,
 } = require('../controllers/authController')
@@ -17,6 +18,7 @@ const router = express.Router()
 router.post('/register', register)
 router.post('/login', login)
 router.post('/resend-verification', resendVerificationEmail)
+router.post('/verify-email-otp', verifyEmailOtp)
 router.get('/me', auth, me)
 router.put('/me', auth, updateMe)
 router.post('/avatar', auth, uploadAvatar, updateAvatar)

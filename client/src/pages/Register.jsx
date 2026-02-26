@@ -1,13 +1,16 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 function Register() {
   const { register } = useAuth()
+  const navigate = useNavigate()
   const [form, setForm] = useState({ name: '', email: '', password: '' })
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [verificationUrl, setVerificationUrl] = useState('')
+  const [verificationOtp, setVerificationOtp] = useState('')
+  const [verificationEmail, setVerificationEmail] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (event) => {
@@ -15,6 +18,8 @@ function Register() {
     setError('')
     setSuccess('')
     setVerificationUrl('')
+    setVerificationOtp('')
+    setVerificationEmail('')
     if (!form.name || !form.email.includes('@') || form.password.length < 6) {
       setError('Please provide a name, valid email, and 6+ character password.')
       return
@@ -22,14 +27,23 @@ function Register() {
     setLoading(true)
     try {
       const data = await register(form)
+      const nextEmail = data?.email || form.email
       setSuccess(
         data?.message ||
-          'Registration successful. Check your email for a verification link.'
+          'Registration successful. Check your email for a verification code.'
       )
+      setVerificationEmail(nextEmail)
       if (data?.verificationUrl) {
         setVerificationUrl(data.verificationUrl)
       }
+      if (data?.verificationOtp) {
+        setVerificationOtp(data.verificationOtp)
+      }
       setForm({ name: '', email: '', password: '' })
+
+      if (data?.verificationMethod === 'otp' || nextEmail) {
+        navigate(`/verify-email?email=${encodeURIComponent(nextEmail)}`)
+      }
     } catch (err) {
       setError(err.message || 'Registration failed. Try again.')
     } finally {
@@ -71,10 +85,21 @@ function Register() {
           />
           {error && <div className="form-error">{error}</div>}
           {success && <div className="form-success">{success}</div>}
+          {verificationEmail && (
+            <p style={{ marginTop: '12px' }}>
+              Enter your code here:{' '}
+              <Link to={`/verify-email?email=${encodeURIComponent(verificationEmail)}`}>
+                Verify Email
+              </Link>
+            </p>
+          )}
           {verificationUrl && (
             <p style={{ marginTop: '12px' }}>
               Dev link: <a href={verificationUrl}>Verify email now</a>
             </p>
+          )}
+          {verificationOtp && (
+            <p style={{ marginTop: '12px' }}>Dev OTP: <strong>{verificationOtp}</strong></p>
           )}
           <button className="btn" type="submit" disabled={loading}>
             {loading ? 'Creating...' : 'Register'}
