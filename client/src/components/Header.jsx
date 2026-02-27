@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Link } from 'react-router-dom'
 import { FiMenu, FiX } from 'react-icons/fi'
 import { useAuth } from '../context/AuthContext'
@@ -16,11 +16,48 @@ const navItems = [
 function Header() {
   const [open, setOpen] = useState(false)
   const [logoLoadFailed, setLogoLoadFailed] = useState(false)
+  const [installPromptEvent, setInstallPromptEvent] = useState(null)
+  const [isInstalled, setIsInstalled] = useState(false)
   const { user, logout } = useAuth()
   const { itemCount } = useCart()
 
   const linkClass = ({ isActive }) =>
     `nav-link ${isActive ? 'active' : ''}`
+
+  useEffect(() => {
+    const standalone = window.matchMedia('(display-mode: standalone)').matches
+    const iosStandalone = window.navigator.standalone === true
+    if (standalone || iosStandalone) {
+      setIsInstalled(true)
+    }
+
+    const handleBeforeInstallPrompt = (event) => {
+      event.preventDefault()
+      setInstallPromptEvent(event)
+    }
+
+    const handleAppInstalled = () => {
+      setIsInstalled(true)
+      setInstallPromptEvent(null)
+    }
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    window.addEventListener('appinstalled', handleAppInstalled)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      window.removeEventListener('appinstalled', handleAppInstalled)
+    }
+  }, [])
+
+  const handleInstall = async () => {
+    if (!installPromptEvent) return
+    await installPromptEvent.prompt()
+    await installPromptEvent.userChoice
+    setInstallPromptEvent(null)
+  }
+
+  const canInstall = !isInstalled && Boolean(installPromptEvent)
 
   return (
     <header className="header">
@@ -66,6 +103,11 @@ function Header() {
           <NavLink to="/order" className={linkClass}>
             Order ({itemCount})
           </NavLink>
+          {canInstall && (
+            <button type="button" className="btn btn-outline install-btn" onClick={handleInstall}>
+              Install App
+            </button>
+          )}
           <Link to="/reservations" className="btn btn-outline">
             Reserve
           </Link>
@@ -119,6 +161,18 @@ function Header() {
           <NavLink to="/order" className={linkClass} onClick={() => setOpen(false)}>
             Order ({itemCount})
           </NavLink>
+          {canInstall && (
+            <button
+              type="button"
+              className="btn btn-outline install-btn"
+              onClick={async () => {
+                await handleInstall()
+                setOpen(false)
+              }}
+            >
+              Install App
+            </button>
+          )}
         </div>
       )}
     </header>

@@ -161,6 +161,10 @@
   justify-content: flex-end;
 }
 
+.install-btn {
+  white-space: nowrap;
+}
+
 .nav-toggle {
   display: none;
   background: transparent;
