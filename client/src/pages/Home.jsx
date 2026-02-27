@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { features, chefSelections, atmosphere, reviews } from '../data/content'
+import resturantHero from '../images/Resturant-hero.jpg'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -13,7 +14,12 @@ function Home() {
 
   return (
     <>
-      <section className="hero">
+      <section
+        className="hero"
+        style={{
+          background: `var(--hero-overlay), url(${resturantHero}) center/cover`,
+        }}
+      >
         <div className="container">
           <motion.div
             className="hero-content"

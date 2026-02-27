@@ -145,7 +145,7 @@ function Register() {
           {verificationOtp && (
             <p style={{ marginTop: '12px' }}>Dev OTP: <strong>{verificationOtp}</strong></p>
           )}
-          <button className="btn" type="submit" disabled={loading}>
+          <button className="btn" type="submit" disabled={loading} style={{ marginTop: '16px' }}>
             {loading ? 'Creating...' : 'Register'}
           </button>
           <p style={{ marginTop: '16px', color: 'var(--text-400)' }}>

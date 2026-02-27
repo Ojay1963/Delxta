@@ -154,13 +154,13 @@ function Login() {
                 type="button"
                 onClick={handleResendVerification}
                 disabled={resending}
-                style={{ marginBottom: '12px', background: 'transparent', color: 'var(--text-100)' }}
+                style={{ marginTop: '12px', marginBottom: '4px', background: 'transparent', color: 'var(--text-100)' }}
               >
                 {resending ? 'Sending OTP...' : 'Resend verification OTP'}
               </button>
             </>
           )}
-          <button className="btn" type="submit" disabled={loading}>
+          <button className="btn" type="submit" disabled={loading} style={{ marginTop: '16px' }}>
             {loading ? 'Signing in...' : 'Login'}
           </button>
           <p style={{ marginTop: '16px', color: 'var(--text-400)' }}>

@@ -112,18 +112,19 @@ function VerifyEmail() {
                 inputMode="numeric"
                 maxLength={6}
               />
-              <button className="btn" type="submit" disabled={loading} style={{ marginTop: '16px' }}>
-                {loading ? 'Verifying...' : 'Verify OTP'}
-              </button>
-              <button
-                className="btn btn-secondary"
-                type="button"
-                onClick={handleResendOtp}
-                disabled={resending}
-                style={{ marginTop: '12px', marginLeft: '10px' }}
-              >
-                {resending ? 'Sending...' : 'Resend OTP'}
-              </button>
+              <div style={{ marginTop: '16px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button className="btn" type="submit" disabled={loading}>
+                  {loading ? 'Verifying...' : 'Verify OTP'}
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={resending}
+                >
+                  {resending ? 'Sending...' : 'Resend OTP'}
+                </button>
+              </div>
             </form>
           )}
           {status === 'success' && (
