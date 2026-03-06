@@ -17,7 +17,7 @@ function Home() {
       <section
         className="hero"
         style={{
-          background: `var(--hero-overlay), url(${resturantHero}) center/cover`,
+          '--hero-image': `url(${resturantHero})`,
         }}
       >
         <div className="container">

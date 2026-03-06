@@ -1,19 +1,31 @@
 import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { apiRequest } from '../utils/api'
 
 function VerifyEmail() {
+  const location = useLocation()
   const [searchParams] = useSearchParams()
+  const routeMessage = location.state?.message || ''
+  const routeOtp = location.state?.verificationOtp || ''
   const [form, setForm] = useState({
     email: searchParams.get('email') || '',
     otp: '',
   })
   const [status, setStatus] = useState(searchParams.get('token') ? 'loading' : 'idle')
   const [message, setMessage] = useState(
-    searchParams.get('token') ? 'Verifying your email...' : 'Enter the OTP sent to your email.'
+    searchParams.get('token')
+      ? 'Verifying your email...'
+      : routeMessage || 'Enter the OTP sent to your email.'
   )
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
+  const [devOtp, setDevOtp] = useState(routeOtp)
+
+  useEffect(() => {
+    if (!searchParams.get('token') && routeMessage) {
+      setMessage(routeMessage)
+    }
+  }, [routeMessage, searchParams])
 
   useEffect(() => {
     const token = searchParams.get('token')
@@ -50,6 +62,7 @@ function VerifyEmail() {
         body: JSON.stringify(form),
       })
       setStatus('success')
+      setDevOtp('')
       setMessage(data?.message || 'Email verified successfully.')
     } catch (err) {
       setStatus('error')
@@ -74,6 +87,7 @@ function VerifyEmail() {
         body: JSON.stringify({ email }),
       })
       setStatus('idle')
+      setDevOtp(data?.verificationOtp || '')
       setMessage(data?.message || 'A new OTP has been sent to your email.')
     } catch (err) {
       setStatus('error')
@@ -91,6 +105,11 @@ function VerifyEmail() {
         <div className="form-card">
           <h3 style={{ marginTop: 0 }}>Email Verification</h3>
           <p>{message}</p>
+          {!token && form.email && (
+            <p style={{ color: 'var(--text-300)', marginTop: '-4px' }}>
+              Verify <strong>{form.email}</strong> to continue.
+            </p>
+          )}
           {!token && status !== 'success' && (
             <form onSubmit={handleOtpSubmit}>
               <label className="form-label">Email</label>
@@ -126,6 +145,11 @@ function VerifyEmail() {
                 </button>
               </div>
             </form>
+          )}
+          {devOtp && !token && status !== 'success' && (
+            <p style={{ marginTop: '12px' }}>
+              Dev OTP: <strong>{devOtp}</strong>
+            </p>
           )}
           {status === 'success' && (
             <p>

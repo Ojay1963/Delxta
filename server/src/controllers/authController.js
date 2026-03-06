@@ -155,7 +155,8 @@ const login = async (req, res, next) => {
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password required.' })
     }
-    const user = await User.findOne({ email })
+    const normalizedEmail = String(email).trim().toLowerCase()
+    const user = await User.findOne({ email: normalizedEmail })
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials.' })
     }
@@ -167,6 +168,7 @@ const login = async (req, res, next) => {
       return res.status(403).json({
         message: 'Please verify your email before signing in.',
         code: 'EMAIL_NOT_VERIFIED',
+        email: user.email,
       })
     }
     const token = createToken(user)
