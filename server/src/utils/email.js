@@ -25,11 +25,16 @@ const createTransporter = () => {
   return null
 }
 
+const createHttpError = (message, status) => {
+  const error = new Error(message)
+  error.status = status
+  return error
+}
+
 async function sendEmail({ to, subject, html, text }) {
   const transporter = createTransporter()
   if (!transporter) {
-    console.log('Email skipped (SMTP not configured):', subject)
-    return
+    throw createHttpError('Email service is not configured on the server.', 503)
   }
 
   const from =
@@ -38,13 +43,27 @@ async function sendEmail({ to, subject, html, text }) {
     process.env.SMTP_USER ||
     'Delxta <no-reply@delxta.com>'
 
-  await transporter.sendMail({
-    from,
-    to,
-    subject,
-    html,
-    text,
-  })
+  try {
+    await transporter.sendMail({
+      from,
+      to,
+      subject,
+      html,
+      text,
+    })
+  } catch (error) {
+    console.error('Email delivery failed:', {
+      message: error.message,
+      code: error.code,
+      response: error.response,
+      responseCode: error.responseCode,
+      command: error.command,
+      to,
+      from,
+    })
+
+    throw createHttpError('Failed to send email. Check SMTP configuration and sender approval.', 502)
+  }
 }
 
 module.exports = { sendEmail }

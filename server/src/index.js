@@ -18,6 +18,13 @@ dotenv.config({ path: path.resolve(__dirname, '..', '.env') })
 
 const app = express()
 const PORT = process.env.PORT || 5000
+const hasSmtpConfig = Boolean(
+  process.env.SMTP_HOST &&
+    process.env.SMTP_PORT &&
+    process.env.SMTP_USER &&
+    process.env.SMTP_PASS
+)
+const hasGmailConfig = Boolean(process.env.EMAIL && process.env.EMAILSECRET)
 
 app.use(
   cors({
@@ -50,6 +57,12 @@ const mongoUri = process.env.MONGO_URI
 if (!mongoUri) {
   console.error('Missing MONGO_URI in environment variables.')
   process.exit(1)
+}
+
+if (process.env.REQUIRE_EMAIL_VERIFICATION === 'true' && !hasSmtpConfig && !hasGmailConfig) {
+  console.warn(
+    'Email verification is enabled but no email transport credentials were loaded. OTP emails will fail.'
+  )
 }
 
 mongoose
