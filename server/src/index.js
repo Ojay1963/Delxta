@@ -65,6 +65,15 @@ if (process.env.REQUIRE_EMAIL_VERIFICATION === 'true' && !hasSmtpConfig && !hasG
   )
 }
 
+if (
+  Boolean(process.env.RENDER || process.env.RENDER_EXTERNAL_URL) &&
+  [25, 465, 587].includes(Number(process.env.SMTP_PORT))
+) {
+  console.warn(
+    'SMTP is configured on a commonly blocked port for free Render web services. If email delivery times out, switch SMTP_PORT to 2525 for providers like Brevo.'
+  )
+}
+
 console.log('Runtime config:', {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: PORT,
