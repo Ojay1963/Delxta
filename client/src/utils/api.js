@@ -1,15 +1,32 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || ''
 
 export async function apiRequest(path, options = {}) {
-  const { headers: customHeaders = {}, ...restOptions } = options
+  const { headers: customHeaders = {}, timeoutMs = 15000, ...restOptions } = options
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...restOptions,
-    headers: {
-      'Content-Type': 'application/json',
-      ...customHeaders,
-    },
-  })
+  let response
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...restOptions,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...customHeaders,
+      },
+    })
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error(
+        'Request timed out. Check that the API URL is correct and the server is running.'
+      )
+    }
+
+    throw error
+  } finally {
+    clearTimeout(timeoutId)
+  }
 
   if (!response.ok) {
     let message = 'Request failed'

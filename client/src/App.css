@@ -411,12 +411,12 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: #ffffff;
-  color: #1fb14e;
+  background: #25d366;
+  color: #ffffff;
   display: grid;
   place-items: center;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(31, 177, 78, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   z-index: 40;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -427,7 +427,7 @@
 }
 
 .whatsapp-float:focus-visible {
-  outline: 2px solid rgba(31, 177, 78, 0.7);
+  outline: 2px solid rgba(37, 211, 102, 0.45);
   outline-offset: 3px;
 }
 

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { FaWhatsapp } from 'react-icons/fa'
 import { features, chefSelections, atmosphere, reviews } from '../data/content'
 import resturantHero from '../images/Resturant-hero.jpg'
 
@@ -295,16 +296,7 @@ function Home() {
         aria-label="Chat with Delxta on WhatsApp"
       >
         <span className="whatsapp-icon" aria-hidden="true">
-          <svg viewBox="0 0 32 32" role="img" focusable="false">
-            <path
-              fill="currentColor"
-              d="M19.2 17.5c-.3-.2-1.7-.8-2-1-.3-.1-.5-.2-.7.2s-.8 1-1 1.2c-.2.2-.4.2-.7 0s-1.4-.5-2.7-1.7c-1-1-1.7-2.2-1.9-2.6-.2-.4 0-.6.1-.8.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5s-.7-1.7-1-2.3c-.3-.6-.6-.5-.8-.5h-.7c-.2 0-.5.1-.7.4-.2.3-1 1-1 2.4s1.1 2.9 1.3 3.1c.2.2 2.1 3.3 5.1 4.6.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 1.9-1.3.2-.6.2-1.2.1-1.3-.1-.1-.3-.2-.6-.4z"
-            />
-            <path
-              fill="currentColor"
-              d="M16 3C9.4 3 4 8.4 4 15c0 2.1.6 4.2 1.7 5.9L4 29l8.3-1.6C13.9 28.4 14.9 28.6 16 28.6c6.6 0 12-5.4 12-12S22.6 3 16 3zm0 22.1c-1 0-2-.2-2.9-.5l-.8-.3-4.9.9.9-4.8-.3-.8c-.4-1-.6-2.1-.6-3.3 0-4.8 3.9-8.6 8.6-8.6 4.8 0 8.6 3.9 8.6 8.6s-3.8 8.8-8.6 8.8z"
-            />
-          </svg>
+          <FaWhatsapp />
         </span>
       </a>
     </>
