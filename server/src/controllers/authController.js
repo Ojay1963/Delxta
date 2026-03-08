@@ -5,6 +5,10 @@ const Reservation = require('../models/Reservation')
 const Order = require('../models/Order')
 const { sendEmail } = require('../utils/email')
 
+const logAuthEvent = (event, details = {}) => {
+  console.log(`[auth] ${event}`, details)
+}
+
 const serializeUser = (user) => ({
   id: user._id,
   name: user.name,
@@ -65,6 +69,10 @@ const register = async (req, res, next) => {
   try {
     const { name, email, password } = req.body
     if (!name || !email || !password) {
+      logAuthEvent('register_rejected', {
+        reason: 'missing_fields',
+        email: email ? String(email).trim().toLowerCase() : '',
+      })
       return res.status(400).json({ message: 'All fields are required.' })
     }
     const normalizedEmail = String(email).trim().toLowerCase()
@@ -73,6 +81,10 @@ const register = async (req, res, next) => {
     if (!isEmailVerificationRequired()) {
       if (existing) {
         if (existing.isEmailVerified) {
+          logAuthEvent('register_rejected', {
+            reason: 'email_in_use',
+            email: normalizedEmail,
+          })
           return res.status(409).json({ message: 'Email already in use.' })
         }
 
@@ -102,12 +114,19 @@ const register = async (req, res, next) => {
 
     if (existing) {
       if (existing.isEmailVerified) {
+        logAuthEvent('register_rejected', {
+          reason: 'email_in_use',
+          email: normalizedEmail,
+        })
         return res.status(409).json({ message: 'Email already in use.' })
       }
 
       existing.name = name
       existing.password = password
       const verificationOtp = await issueEmailVerificationOtp(existing)
+      logAuthEvent('register_pending_account_otp_issued', {
+        email: existing.email,
+      })
 
       const response = {
         message:
@@ -128,6 +147,9 @@ const register = async (req, res, next) => {
     }
     const user = await User.create({ name, email: normalizedEmail, password })
     const verificationOtp = await issueEmailVerificationOtp(user)
+    logAuthEvent('register_otp_issued', {
+      email: user.email,
+    })
 
     const response = {
       message: 'Registration successful. Please verify your email with the OTP sent.',
@@ -153,18 +175,34 @@ const login = async (req, res, next) => {
   try {
     const { email, password } = req.body
     if (!email || !password) {
+      logAuthEvent('login_rejected', {
+        reason: 'missing_credentials',
+        email: email ? String(email).trim().toLowerCase() : '',
+      })
       return res.status(400).json({ message: 'Email and password required.' })
     }
     const normalizedEmail = String(email).trim().toLowerCase()
     const user = await User.findOne({ email: normalizedEmail })
     if (!user) {
+      logAuthEvent('login_rejected', {
+        reason: 'user_not_found',
+        email: normalizedEmail,
+      })
       return res.status(401).json({ message: 'Invalid credentials.' })
     }
     const isMatch = await user.comparePassword(password)
     if (!isMatch) {
+      logAuthEvent('login_rejected', {
+        reason: 'invalid_password',
+        email: normalizedEmail,
+      })
       return res.status(401).json({ message: 'Invalid credentials.' })
     }
     if (isEmailVerificationRequired() && !user.isEmailVerified) {
+      logAuthEvent('login_rejected', {
+        reason: 'email_not_verified',
+        email: user.email,
+      })
       return res.status(403).json({
         message: 'Please verify your email before signing in.',
         code: 'EMAIL_NOT_VERIFIED',
@@ -297,6 +335,10 @@ const verifyEmailOtp = async (req, res, next) => {
     const otp = String(req.body?.otp || '').trim()
 
     if (!email || !otp) {
+      logAuthEvent('verify_otp_rejected', {
+        reason: 'missing_email_or_otp',
+        email,
+      })
       return res.status(400).json({ message: 'Email and OTP are required.' })
     }
 
@@ -305,10 +347,18 @@ const verifyEmailOtp = async (req, res, next) => {
     )
 
     if (!user) {
+      logAuthEvent('verify_otp_rejected', {
+        reason: 'user_not_found',
+        email,
+      })
       return res.status(404).json({ message: 'No account found for that email.' })
     }
 
     if (user.isEmailVerified) {
+      logAuthEvent('verify_otp_rejected', {
+        reason: 'already_verified',
+        email,
+      })
       return res.status(400).json({
         message: 'This email is already verified. You can sign in.',
         code: 'EMAIL_ALREADY_VERIFIED',
@@ -316,6 +366,10 @@ const verifyEmailOtp = async (req, res, next) => {
     }
 
     if (!user.emailVerificationOtpHash || !user.emailVerificationOtpExpires) {
+      logAuthEvent('verify_otp_rejected', {
+        reason: 'otp_not_requested',
+        email,
+      })
       return res.status(400).json({
         message: 'No OTP is active for this email. Request a new verification code.',
         code: 'OTP_NOT_REQUESTED',
@@ -323,6 +377,10 @@ const verifyEmailOtp = async (req, res, next) => {
     }
 
     if (user.emailVerificationOtpExpires <= new Date()) {
+      logAuthEvent('verify_otp_rejected', {
+        reason: 'otp_expired',
+        email,
+      })
       return res.status(400).json({
         message: 'OTP has expired. Request a new verification code.',
         code: 'OTP_EXPIRED',
@@ -330,6 +388,10 @@ const verifyEmailOtp = async (req, res, next) => {
     }
 
     if ((user.emailVerificationOtpAttempts || 0) >= 5) {
+      logAuthEvent('verify_otp_rejected', {
+        reason: 'otp_attempts_exceeded',
+        email,
+      })
       return res.status(429).json({
         message: 'Too many incorrect OTP attempts. Request a new verification code.',
         code: 'OTP_ATTEMPTS_EXCEEDED',
@@ -340,6 +402,11 @@ const verifyEmailOtp = async (req, res, next) => {
     if (!isMatch) {
       user.emailVerificationOtpAttempts = (user.emailVerificationOtpAttempts || 0) + 1
       await user.save()
+      logAuthEvent('verify_otp_rejected', {
+        reason: 'otp_invalid',
+        email,
+        attempts: user.emailVerificationOtpAttempts,
+      })
       return res.status(400).json({
         message: 'Invalid OTP code.',
         code: 'OTP_INVALID',
@@ -353,6 +420,9 @@ const verifyEmailOtp = async (req, res, next) => {
     user.emailVerificationToken = undefined
     user.emailVerificationExpires = undefined
     await user.save()
+    logAuthEvent('verify_otp_succeeded', {
+      email,
+    })
 
     return res.json({ message: 'Email verified successfully. You can now sign in.' })
   } catch (error) {
@@ -364,15 +434,26 @@ const resendVerificationEmail = async (req, res, next) => {
   try {
     const email = String(req.body?.email || '').trim().toLowerCase()
     if (!email) {
+      logAuthEvent('resend_verification_rejected', {
+        reason: 'missing_email',
+      })
       return res.status(400).json({ message: 'Email is required.' })
     }
 
     const user = await User.findOne({ email })
     if (!user) {
+      logAuthEvent('resend_verification_rejected', {
+        reason: 'user_not_found',
+        email,
+      })
       return res.status(404).json({ message: 'No account found for that email.' })
     }
 
     if (user.isEmailVerified) {
+      logAuthEvent('resend_verification_rejected', {
+        reason: 'already_verified',
+        email,
+      })
       return res.status(400).json({
         message: 'This email is already verified. You can sign in.',
         code: 'EMAIL_ALREADY_VERIFIED',
@@ -380,6 +461,9 @@ const resendVerificationEmail = async (req, res, next) => {
     }
 
     const verificationOtp = await issueEmailVerificationOtp(user)
+    logAuthEvent('resend_verification_otp_issued', {
+      email: user.email,
+    })
     const response = {
       message: 'Verification OTP sent. Please check your inbox.',
       verificationMethod: 'otp',
