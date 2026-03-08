@@ -1,7 +1,34 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || ''
+const DEFAULT_LOCAL_API_URL = 'http://localhost:5000'
+const DEFAULT_PRODUCTION_API_URL = 'https://delxta.onrender.com'
+
+const trimTrailingSlash = (value) => String(value || '').trim().replace(/\/+$/, '')
+
+const isLocalApiUrl = (value) =>
+  /^https?:\/\/(localhost|127(?:\.\d{1,3}){3})(:\d+)?$/i.test(trimTrailingSlash(value))
+
+const resolveApiBaseUrl = () => {
+  const envApiUrl = trimTrailingSlash(
+    import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || ''
+  )
+
+  if (envApiUrl && !(import.meta.env.PROD && isLocalApiUrl(envApiUrl))) {
+    return envApiUrl
+  }
+
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return DEFAULT_LOCAL_API_URL
+    }
+  }
+
+  return DEFAULT_PRODUCTION_API_URL
+}
+
+const API_BASE_URL = resolveApiBaseUrl()
 
 export async function apiRequest(path, options = {}) {
-  const { headers: customHeaders = {}, timeoutMs = 15000, ...restOptions } = options
+  const { headers: customHeaders = {}, timeoutMs = 65000, ...restOptions } = options
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
@@ -19,7 +46,7 @@ export async function apiRequest(path, options = {}) {
   } catch (error) {
     if (error.name === 'AbortError') {
       throw new Error(
-        'Request timed out. Check that the API URL is correct and the server is running.'
+        'Request timed out. The server may be waking up on Render. Wait a moment and try again.'
       )
     }
 
