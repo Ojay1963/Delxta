@@ -65,6 +65,22 @@ if (process.env.REQUIRE_EMAIL_VERIFICATION === 'true' && !hasSmtpConfig && !hasG
   )
 }
 
+console.log('Runtime config:', {
+  nodeEnv: process.env.NODE_ENV || 'development',
+  port: PORT,
+  emailVerificationEnabled: process.env.REQUIRE_EMAIL_VERIFICATION === 'true',
+  smtpConfigured: hasSmtpConfig,
+  gmailConfigured: hasGmailConfig,
+  smtpHostConfigured: Boolean(process.env.SMTP_HOST),
+  smtpPortConfigured: Boolean(process.env.SMTP_PORT),
+  smtpUserConfigured: Boolean(process.env.SMTP_USER),
+  smtpPassConfigured: Boolean(process.env.SMTP_PASS),
+  smtpFromConfigured: Boolean(process.env.SMTP_FROM),
+  clientUrlConfigured: Boolean(process.env.CLIENT_URL),
+  adminEmailConfigured: Boolean(process.env.ADMIN_EMAIL),
+  adminPasswordConfigured: Boolean(process.env.ADMIN_PASSWORD),
+})
+
 mongoose
   .connect(mongoUri)
   .then(async () => {
