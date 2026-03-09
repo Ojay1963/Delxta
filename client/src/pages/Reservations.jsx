@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { apiRequest } from '../utils/api'
 import { useAuth } from '../context/AuthContext'
 
@@ -13,10 +14,25 @@ const initialState = {
 }
 
 function Reservations() {
-  const { token } = useAuth()
+  const { token, user } = useAuth()
+  const location = useLocation()
   const [form, setForm] = useState(initialState)
   const [errors, setErrors] = useState({})
   const [status, setStatus] = useState('idle')
+  const query = useMemo(() => new URLSearchParams(location.search), [location.search])
+
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      name: user?.name || prev.name,
+      email: user?.email || prev.email,
+      phone: user?.phone || prev.phone,
+      guests: query.get('guests') || prev.guests,
+      date: query.get('date') || prev.date,
+      time: query.get('time') || prev.time,
+      requests: query.get('requests') || prev.requests,
+    }))
+  }, [query, user])
 
   const validate = () => {
     const next = {}
@@ -43,7 +59,12 @@ function Reservations() {
         body: JSON.stringify(form),
       })
       setStatus('success')
-      setForm(initialState)
+      setForm({
+        ...initialState,
+        name: user?.name || '',
+        email: user?.email || '',
+        phone: user?.phone || '',
+      })
     } catch {
       setStatus('error')
     }

@@ -17,7 +17,13 @@ function Header() {
   const [open, setOpen] = useState(false)
   const [logoLoadFailed, setLogoLoadFailed] = useState(false)
   const [installPromptEvent, setInstallPromptEvent] = useState(null)
-  const [isInstalled, setIsInstalled] = useState(false)
+  const [isInstalled, setIsInstalled] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true
+    )
+  })
   const { user, logout } = useAuth()
   const { itemCount } = useCart()
 
@@ -25,12 +31,6 @@ function Header() {
     `nav-link ${isActive ? 'active' : ''}`
 
   useEffect(() => {
-    const standalone = window.matchMedia('(display-mode: standalone)').matches
-    const iosStandalone = window.navigator.standalone === true
-    if (standalone || iosStandalone) {
-      setIsInstalled(true)
-    }
-
     const handleBeforeInstallPrompt = (event) => {
       event.preventDefault()
       setInstallPromptEvent(event)

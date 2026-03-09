@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
@@ -23,24 +24,47 @@ const formatCurrency = (amount) => `NGN ${amount.toLocaleString()}`
 
 function Menu() {
   const [category, setCategory] = useState(menuCategories[0])
-  const [items, setItems] = useState([])
-  const [status, setStatus] = useState('loading')
-  const [error, setError] = useState('')
+  const [menuState, setMenuState] = useState({
+    category: '',
+    items: [],
+    error: '',
+  })
   const [configByItemId, setConfigByItemId] = useState({})
   const [addedMessage, setAddedMessage] = useState('')
   const { addItem, itemCount } = useCart()
+  const items = menuState.items
+  const error = menuState.error
+  const status = menuState.category !== category
+    ? 'loading'
+    : menuState.error
+      ? 'error'
+      : 'success'
+  const availableCount = items.filter((item) => item.isAvailable !== false).length
 
   useEffect(() => {
-    setStatus('loading')
+    let isMounted = true
+
     apiRequest(`/api/menu?category=${encodeURIComponent(category)}`)
       .then((data) => {
-        setItems(data.items)
-        setStatus('success')
+        if (!isMounted) return
+        setMenuState({
+          category,
+          items: data.items || [],
+          error: '',
+        })
       })
       .catch((err) => {
-        setError(err.message)
-        setStatus('error')
+        if (!isMounted) return
+        setMenuState({
+          category,
+          items: [],
+          error: err.message || 'Failed to load menu.',
+        })
       })
+
+    return () => {
+      isMounted = false
+    }
   }, [category])
 
   const configFor = (item) => {
@@ -75,11 +99,31 @@ function Menu() {
 
   return (
     <section className="section">
-      <div className="container">
-        <h2 className="section-title">Our Menu</h2>
-        <p className="section-subtitle">
-          Select serving type and quantity, then add to your order.
-        </p>
+      <div className="container menu-page">
+        <div className="menu-hero panel">
+          <div>
+            <p className="profile-eyebrow">Browse Delxta</p>
+            <h2 className="section-title" style={{ textAlign: 'left', marginBottom: '10px' }}>Our Menu</h2>
+            <p className="section-subtitle" style={{ textAlign: 'left', margin: 0 }}>
+              Choose a category, adjust serving type and quantity, then build your order with clearer pricing.
+            </p>
+          </div>
+          <div className="menu-hero-stats">
+            <div className="profile-highlight-chip">
+              <span className="profile-meta-label">Category</span>
+              <strong>{category}</strong>
+            </div>
+            <div className="profile-highlight-chip">
+              <span className="profile-meta-label">Available Items</span>
+              <strong>{availableCount}</strong>
+            </div>
+            <div className="profile-highlight-chip">
+              <span className="profile-meta-label">Order Basket</span>
+              <strong>{itemCount} item(s)</strong>
+            </div>
+          </div>
+        </div>
+
         {itemCount > 0 && (
           <div className="menu-actions-row">
             <div className="pill">Items in order: {itemCount}</div>
@@ -112,10 +156,13 @@ function Menu() {
               const config = configFor(item)
               const unitOptions = getUnitOptionsForItem(item)
               const estimated = estimatedUnitPrice(item, config.servingOption)
+              const selectedOption = findUnitOption(item, config.servingOption)
+              const subtotal = estimated * config.quantity
+
               return (
                 <motion.div
                   key={item._id}
-                  className="image-card"
+                  className="image-card menu-item-card"
                   variants={fadeUp}
                   initial="hidden"
                   whileInView="visible"
@@ -123,9 +170,17 @@ function Menu() {
                 >
                   <img src={item.image} alt={item.name} />
                   <div className="image-card-body">
-                    <h4>{item.name}</h4>
+                    <div className="menu-card-header">
+                      <h4>{item.name}</h4>
+                      <span className={`status-badge ${item.isAvailable === false ? 'danger' : 'success'}`}>
+                        {item.isAvailable === false ? 'Unavailable' : 'Available'}
+                      </span>
+                    </div>
                     <p>{item.description}</p>
-                    <p className="price">{item.price}</p>
+                    <div className="menu-card-price-row">
+                      <p className="price">{item.price}</p>
+                      <span className="menu-base-price">Base price</span>
+                    </div>
                     <div className="item-config-grid">
                       <div>
                         <label className="form-label">Serving Type</label>
@@ -156,15 +211,27 @@ function Menu() {
                         />
                       </div>
                     </div>
-                    <p className="price" style={{ marginTop: '8px' }}>
-                      Estimated unit price: {formatCurrency(estimated)}
-                    </p>
+                    <div className="menu-card-summary">
+                      <div>
+                        <span className="profile-meta-label">Selected Serving</span>
+                        <strong>{selectedOption.label}</strong>
+                      </div>
+                      <div>
+                        <span className="profile-meta-label">Unit Price</span>
+                        <strong>{formatCurrency(estimated)}</strong>
+                      </div>
+                      <div>
+                        <span className="profile-meta-label">Subtotal</span>
+                        <strong>{formatCurrency(subtotal)}</strong>
+                      </div>
+                    </div>
                     <button
                       type="button"
                       className="btn btn-outline card-action-btn"
                       onClick={() => handleAddToOrder(item)}
+                      disabled={item.isAvailable === false}
                     >
-                      Place an Order
+                      {item.isAvailable === false ? 'Unavailable' : 'Add to Order'}
                     </button>
                   </div>
                 </motion.div>

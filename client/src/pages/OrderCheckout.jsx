@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { apiRequest } from '../utils/api'
 import { useCart } from '../context/CartContext'
@@ -27,7 +27,7 @@ const initialCardDetails = {
 
 function OrderCheckout() {
   const { items, subtotal, updateQuantity, removeItem, clearCart } = useCart()
-  const { token } = useAuth()
+  const { token, user } = useAuth()
   const navigate = useNavigate()
   const [form, setForm] = useState(initialForm)
   const [cardDetails, setCardDetails] = useState(initialCardDetails)
@@ -38,6 +38,21 @@ function OrderCheckout() {
 
   const deliveryFee = form.deliveryType === 'home_delivery' ? deliveryFeeValue : 0
   const total = useMemo(() => subtotal + deliveryFee, [subtotal, deliveryFee])
+
+  useEffect(() => {
+    if (!user) return
+    setForm((prev) => ({
+      ...prev,
+      customerName: prev.customerName || user.name || '',
+      email: prev.email || user.email || '',
+      phone: prev.phone || user.phone || '',
+      deliveryAddress:
+        prev.deliveryAddress
+        || [user.addressLine1, user.addressLine2, user.city, user.stateRegion, user.country]
+          .filter(Boolean)
+          .join(', '),
+    }))
+  }, [user])
 
   const validate = () => {
     const next = {}

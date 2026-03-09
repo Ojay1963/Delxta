@@ -23,30 +23,47 @@ function formatOrderNumber(id) {
 function OrderDetails() {
   const { id } = useParams()
   const { token } = useAuth()
-  const [status, setStatus] = useState('loading')
-  const [error, setError] = useState('')
+  const [requestState, setRequestState] = useState({
+    orderId: '',
+    error: '',
+  })
   const [order, setOrder] = useState(null)
+  const status = !token
+    ? 'error'
+    : requestState.orderId !== id
+      ? 'loading'
+      : requestState.error
+        ? 'error'
+        : 'success'
+  const error = !token ? 'Please sign in to view order details.' : requestState.error
 
   useEffect(() => {
-    if (!token) {
-      setStatus('error')
-      setError('Please sign in to view order details.')
-      return
-    }
+    if (!token) return
 
-    setStatus('loading')
-    setError('')
+    let isMounted = true
     apiRequest(`/api/orders/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((data) => {
+        if (!isMounted) return
         setOrder(data.order || null)
-        setStatus('success')
+        setRequestState({
+          orderId: id,
+          error: '',
+        })
       })
       .catch((err) => {
-        setError(err.message || 'Unable to load order details.')
-        setStatus('error')
+        if (!isMounted) return
+        setOrder(null)
+        setRequestState({
+          orderId: id,
+          error: err.message || 'Unable to load order details.',
+        })
       })
+
+    return () => {
+      isMounted = false
+    }
   }, [id, token])
 
   return (

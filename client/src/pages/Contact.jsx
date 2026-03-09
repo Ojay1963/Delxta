@@ -37,7 +37,7 @@ function Contact() {
       })
       setStatus('success')
       setForm(initialState)
-    } catch (err) {
+    } catch {
       setStatus('error')
     }
   }

@@ -4,6 +4,7 @@ const {
   me,
   register,
   updateMe,
+  changePassword,
   updateAvatar,
   verifyEmail,
   verifyEmailOtp,
@@ -21,6 +22,7 @@ router.post('/resend-verification', resendVerificationEmail)
 router.post('/verify-email-otp', verifyEmailOtp)
 router.get('/me', auth, me)
 router.put('/me', auth, updateMe)
+router.put('/change-password', auth, changePassword)
 router.post('/avatar', auth, uploadAvatar, updateAvatar)
 router.get('/dashboard', auth, getDashboard)
 router.get('/verify-email', verifyEmail)

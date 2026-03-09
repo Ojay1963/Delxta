@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useEffect, useState } from 'react'
 import { apiRequest } from '../utils/api'
 
 const AuthContext = createContext(null)
@@ -6,20 +7,33 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem('delxta_token'))
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(() => Boolean(localStorage.getItem('delxta_token')))
 
   useEffect(() => {
     if (!token) return
-    setLoading(true)
+    let isMounted = true
+
     apiRequest('/api/auth/me', {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((data) => setUser(data.user))
+      .then((data) => {
+        if (!isMounted) return
+        setUser(data.user)
+      })
       .catch(() => {
+        if (!isMounted) return
         localStorage.removeItem('delxta_token')
         setToken(null)
+        setUser(null)
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        if (!isMounted) return
+        setLoading(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
   }, [token])
 
   const login = async (payload) => {
@@ -66,28 +80,40 @@ export function AuthProvider({ children }) {
     return data
   }
 
+  const changePassword = async (payload) => {
+    if (!token) throw new Error('Not authenticated.')
+    return apiRequest('/api/auth/change-password', {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    })
+  }
+
   const logout = () => {
     localStorage.removeItem('delxta_token')
     setToken(null)
     setUser(null)
+    setLoading(false)
   }
 
-  const value = useMemo(
-    () => ({
-      token,
-      user,
-      loading,
-      login,
-      register,
-      resendVerificationEmail,
-      logout,
-      refreshUser,
-      updateProfile,
-    }),
-    [token, user, loading]
+  return (
+    <AuthContext.Provider
+      value={{
+        token,
+        user,
+        loading,
+        login,
+        register,
+        resendVerificationEmail,
+        logout,
+        refreshUser,
+        updateProfile,
+        changePassword,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
   )
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export const useAuth = () => useContext(AuthContext)

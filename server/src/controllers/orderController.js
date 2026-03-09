@@ -404,6 +404,38 @@ const getAdminOrders = async (req, res, next) => {
   }
 }
 
+const cancelMyOrder = async (req, res, next) => {
+  try {
+    const { id } = req.params
+    const user = await User.findById(req.user.id).select('email')
+    if (!user) return res.status(404).json({ message: 'User not found.' })
+
+    const order = await Order.findOne({
+      _id: id,
+      ...buildUserOrderQuery(user),
+    }).select(
+      'customerName email phone items total orderStatus paymentStatus deliveryType paymentMethod createdAt user'
+    )
+
+    if (!order) return res.status(404).json({ message: 'Order not found.' })
+
+    if (order.orderStatus === 'cancelled') {
+      return res.status(400).json({ message: 'This order is already cancelled.' })
+    }
+
+    if (!['pending', 'confirmed'].includes(order.orderStatus)) {
+      return res.status(400).json({ message: 'This order can no longer be cancelled online.' })
+    }
+
+    order.orderStatus = 'cancelled'
+    await order.save()
+
+    return res.json({ message: 'Order cancelled successfully.', order })
+  } catch (error) {
+    return next(error)
+  }
+}
+
 const updateOrderStatus = async (req, res, next) => {
   try {
     const { id } = req.params
@@ -445,6 +477,7 @@ module.exports = {
   getMyOrders,
   getOrderById,
   getAdminOrders,
+  cancelMyOrder,
   updateOrderStatus,
   materializeOrderFromSession,
 }

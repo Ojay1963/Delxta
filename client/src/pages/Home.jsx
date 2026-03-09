@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -12,6 +13,11 @@ const fadeUp = {
 
 function Home() {
   const [isMapOpen, setIsMapOpen] = useState(false)
+  const spotlightStats = [
+    ['Cuisine', 'Nigerian soul with global polish'],
+    ['Location', 'Victoria Island, Lagos'],
+    ['Experience', 'Reservations, events, and fast ordering'],
+  ]
 
   return (
     <>
@@ -22,27 +28,56 @@ function Home() {
         }}
       >
         <div className="container">
-          <motion.div
-            className="hero-content"
-            initial="hidden"
-            animate="visible"
-            variants={fadeUp}
-          >
-            <span className="pill">Welcome to</span>
-            <h1>DELXTA</h1>
-            <p>
-              Where Nigerian heritage meets global culinary excellence. An
-              unforgettable five-star dining experience.
-            </p>
-            <div className="hero-actions">
-              <Link className="btn" to="/menu">
-                Explore Menu
-              </Link>
-              <a className="btn btn-outline" href="#watch-video">
-                Watch Video
-              </a>
-            </div>
-          </motion.div>
+          <div className="hero-layout">
+            <motion.div
+              className="hero-content"
+              initial="hidden"
+              animate="visible"
+              variants={fadeUp}
+            >
+              <span className="pill">Welcome to</span>
+              <h1>DELXTA</h1>
+              <p>
+                Where Nigerian heritage meets modern hospitality, with a richer dining room,
+                sharper service flow, and a cleaner ordering experience.
+              </p>
+              <div className="hero-actions">
+                <Link className="btn" to="/reservations">
+                  Reserve a Table
+                </Link>
+                <Link className="btn btn-outline" to="/menu">
+                  Explore Menu
+                </Link>
+                <a className="btn btn-muted" href="#watch-video">
+                  Watch Video
+                </a>
+              </div>
+            </motion.div>
+
+            <motion.aside
+              className="hero-spotlight panel"
+              initial="hidden"
+              animate="visible"
+              variants={fadeUp}
+            >
+              <p className="profile-eyebrow">Tonight at Delxta</p>
+              <h3>Designed for date nights, private dinners, and polished group experiences.</h3>
+              <div className="hero-spotlight-list">
+                {spotlightStats.map(([label, value]) => (
+                  <div key={label}>
+                    <span className="profile-meta-label">{label}</span>
+                    <strong>{value}</strong>
+                  </div>
+                ))}
+              </div>
+              <div className="hero-spotlight-actions">
+                <Link className="profile-inline-link profile-inline-action" to="/contact">
+                  Ask about private dining
+                </Link>
+              </div>
+            </motion.aside>
+          </div>
+
           <div className="feature-grid">
             {features.map((feature) => (
               <motion.div
@@ -66,7 +101,7 @@ function Home() {
         <div className="container">
           <h2 className="section-title">Watch the Experience</h2>
           <p className="section-subtitle">
-            A quick look at Delxta’s ambiance and signature moments.
+            A quick look at Delxta's ambiance and signature moments.
           </p>
           <div className="video-card">
             <div className="video-frame">
@@ -94,11 +129,15 @@ function Home() {
               Visit Us in Lagos
             </h2>
             <p className="section-subtitle" style={{ textAlign: 'left', margin: 0 }}>
-              We’re located in the heart of Victoria Island.
+              We're positioned for easy access from the heart of Victoria Island.
             </p>
             <div className="address-card">
               <strong>Delxta Restaurant</strong>
               <p>Block 12, Plot 4 Admiralty Way, Lekki Phase 1, Lagos State, Nigeria</p>
+              <div className="address-meta">
+                <span className="pill">Open for reservations</span>
+                <span className="pill">Order pickup available</span>
+              </div>
               <button
                 type="button"
                 className="direction-btn"
@@ -142,10 +181,17 @@ function Home() {
 
       <section className="section">
         <div className="container">
-          <h2 className="section-title">Chef's Selections</h2>
-          <p className="section-subtitle">
-            Hand-picked favorites that define the Delxta experience.
-          </p>
+          <div className="section-heading-row">
+            <div>
+              <h2 className="section-title" style={{ textAlign: 'left' }}>Chef&apos;s Selections</h2>
+              <p className="section-subtitle" style={{ textAlign: 'left', margin: 0 }}>
+                Hand-picked favorites that define the Delxta experience.
+              </p>
+            </div>
+            <Link className="btn btn-outline" to="/menu">
+              View Full Menu
+            </Link>
+          </div>
           <div className="selection-grid">
             {chefSelections.map((item) => (
               <motion.div
@@ -161,14 +207,12 @@ function Home() {
                   <h4>{item.title}</h4>
                   <p>{item.description}</p>
                   <p className="price">{item.price}</p>
+                  <Link className="profile-inline-link profile-inline-action" to="/menu">
+                    Order this dish
+                  </Link>
                 </div>
               </motion.div>
             ))}
-          </div>
-          <div style={{ textAlign: 'center', marginTop: '28px' }}>
-            <Link className="btn btn-outline" to="/menu">
-              View Full Menu
-            </Link>
           </div>
         </div>
       </section>
@@ -217,7 +261,7 @@ function Home() {
         <div className="container">
           <h2 className="section-title">Guest Reviews</h2>
           <p className="section-subtitle">
-            Five-star experiences from our guests around Lagos and beyond.
+            Real impressions from guests who came for the food and stayed for the overall experience.
           </p>
           <div className="reviews">
             {reviews.map((review) => (
@@ -248,10 +292,15 @@ function Home() {
       <section className="cta">
         <div className="container">
           <h2>Ready to Experience Delxta?</h2>
-          <p>Book your table now and indulge in a culinary journey like no other.</p>
-          <Link className="btn btn-muted" to="/reservations">
-            Reserve a Table
-          </Link>
+          <p>Reserve your table, start an order, or speak to the team about a more curated dining plan.</p>
+          <div className="cta-actions">
+            <Link className="btn btn-muted" to="/reservations">
+              Reserve a Table
+            </Link>
+            <Link className="btn btn-outline" to="/menu">
+              Start an Order
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -272,7 +321,7 @@ function Home() {
                 onClick={() => setIsMapOpen(false)}
                 aria-label="Close directions"
               >
-                ✕
+                ×
               </button>
             </div>
             <div className="map-embed">

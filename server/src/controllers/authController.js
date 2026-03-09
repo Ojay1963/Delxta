@@ -18,8 +18,18 @@ const serializeUser = (user) => ({
   gender: user.gender || 'prefer_not_to_say',
   city: user.city || '',
   country: user.country || '',
+  addressLine1: user.addressLine1 || '',
+  addressLine2: user.addressLine2 || '',
+  stateRegion: user.stateRegion || '',
+  postalCode: user.postalCode || '',
+  deliveryNotes: user.deliveryNotes || '',
   bio: user.bio || '',
   avatarUrl: user.avatarUrl || '',
+  preferredContactMethod: user.preferredContactMethod || 'email',
+  preferredDiningTime: user.preferredDiningTime || 'flexible',
+  dietaryPreference: user.dietaryPreference || 'none',
+  marketingOptIn: Boolean(user.marketingOptIn),
+  smsOptIn: Boolean(user.smsOptIn),
   isEmailVerified: Boolean(user.isEmailVerified),
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
@@ -240,7 +250,17 @@ const updateMe = async (req, res, next) => {
       'gender',
       'city',
       'country',
+      'addressLine1',
+      'addressLine2',
+      'stateRegion',
+      'postalCode',
+      'deliveryNotes',
       'bio',
+      'preferredContactMethod',
+      'preferredDiningTime',
+      'dietaryPreference',
+      'marketingOptIn',
+      'smsOptIn',
     ]
 
     const updates = {}
@@ -252,6 +272,10 @@ const updateMe = async (req, res, next) => {
 
     if (updates.name !== undefined && !String(updates.name).trim()) {
       return res.status(400).json({ message: 'Name cannot be empty.' })
+    }
+
+    if (updates.bio !== undefined && String(updates.bio).trim().length > 160) {
+      return res.status(400).json({ message: 'Bio must be 160 characters or fewer.' })
     }
 
     const user = await User.findByIdAndUpdate(req.user.id, updates, {
@@ -267,6 +291,42 @@ const updateMe = async (req, res, next) => {
       message: 'Profile updated successfully.',
       user: serializeUser(user),
     })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+const changePassword = async (req, res, next) => {
+  try {
+    const currentPassword = String(req.body?.currentPassword || '')
+    const newPassword = String(req.body?.newPassword || '')
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Current password and new password are required.' })
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters.' })
+    }
+
+    const user = await User.findById(req.user.id)
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' })
+    }
+
+    const isMatch = await user.comparePassword(currentPassword)
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Current password is incorrect.' })
+    }
+
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ message: 'New password must be different from the current password.' })
+    }
+
+    user.password = newPassword
+    await user.save()
+
+    return res.json({ message: 'Password updated successfully.' })
   } catch (error) {
     return next(error)
   }
@@ -574,6 +634,7 @@ module.exports = {
   login,
   me,
   updateMe,
+  changePassword,
   updateAvatar,
   verifyEmail,
   verifyEmailOtp,

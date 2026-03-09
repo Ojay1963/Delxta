@@ -1,800 +1,767 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { apiRequest, API_BASE_URL } from '../utils/api'
+import { useCart } from '../context/CartContext'
 
-function formatDate(dateValue) {
-  if (!dateValue) return '-'
-  const date = new Date(dateValue)
-  if (Number.isNaN(date.getTime())) return '-'
-  return date.toLocaleDateString()
+const fmtDate = (value) => {
+  if (!value) return '-'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString()
 }
 
-function profileCompletion(user) {
-  const checks = [
-    user?.name,
-    user?.phone,
-    user?.city,
-    user?.country,
-    user?.bio,
-  ]
-  const complete = checks.filter(Boolean).length
-  return Math.round((complete / checks.length) * 100)
+const fmtDateTime = (value) => {
+  if (!value) return '-'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString()
 }
 
-function formatReservationNumber(id) {
-  if (!id) return 'RSV-0000'
-  return `RSV-${String(id).slice(-6).toUpperCase()}`
+const fmtTitle = (value) =>
+  String(value || '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+
+const fmtMoney = (value) => `NGN ${(Number(value) || 0).toLocaleString()}`
+const fmtOrder = (id) => (id ? `ORD-${String(id).slice(-6).toUpperCase()}` : 'ORD-0000')
+const fmtReservation = (id) => (id ? `RSV-${String(id).slice(-6).toUpperCase()}` : 'RSV-0000')
+const pluralize = (value, singular, plural = `${singular}s`) => `${value} ${value === 1 ? singular : plural}`
+
+const getTone = (status) => {
+  const value = String(status || '').toLowerCase()
+  if (['confirmed', 'paid', 'completed', 'verified', 'ready_for_pickup'].includes(value)) return 'success'
+  if (['pending', 'preparing', 'active', 'out_for_delivery'].includes(value)) return 'warning'
+  if (['cancelled', 'failed', 'unpaid'].includes(value)) return 'danger'
+  return 'neutral'
 }
 
-function formatOrderNumber(id) {
-  if (!id) return 'ORD-0000'
-  return `ORD-${String(id).slice(-6).toUpperCase()}`
-}
+const getTasks = (user) => [
+  { id: 'phone', label: 'Add your phone number', complete: Boolean(user?.phone) },
+  { id: 'address', label: 'Save a delivery address', complete: Boolean(user?.addressLine1) },
+  { id: 'city', label: 'Add your city', complete: Boolean(user?.city) },
+  { id: 'country', label: 'Add your country', complete: Boolean(user?.country) },
+  { id: 'bio', label: 'Write a short bio', complete: Boolean(user?.bio) },
+  { id: 'avatar', label: 'Upload a profile photo', complete: Boolean(user?.avatarUrl) },
+]
 
-function formatCurrency(amount) {
-  const value = Number(amount) || 0
-  return `NGN ${value.toLocaleString()}`
-}
-
-function onKeyboardActivate(event, callback) {
-  if (event.key === 'Enter' || event.key === ' ') {
-    event.preventDefault()
-    callback()
-  }
-}
+const reservationStatuses = ['pending', 'confirmed', 'cancelled']
+const orderStatuses = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'ready_for_pickup', 'completed', 'cancelled']
 
 function Profile() {
   const { user, token, logout } = useAuth()
+  const { replaceCart } = useCart()
   const location = useLocation()
-  const [dashboard, setDashboard] = useState({
-    stats: {
-      totalReservations: 0,
-      pendingReservations: 0,
-      totalOrders: 0,
-      activeOrders: 0,
-      paidOrders: 0,
-      profileCompletion: 0,
-      memberSince: null,
-    },
-    recentReservations: [],
-    recentOrders: [],
-    adminOrderSummary: null,
-  })
-  const [adminReservations, setAdminReservations] = useState([])
-  const [adminOrders, setAdminOrders] = useState([])
-  const [adminActionMessage, setAdminActionMessage] = useState('')
-  const [adminActionError, setAdminActionError] = useState('')
-  const [updatingReservationId, setUpdatingReservationId] = useState('')
-  const [updatingOrderId, setUpdatingOrderId] = useState('')
-  const [adminFilter, setAdminFilter] = useState('pending')
-  const [adminOrderFilter, setAdminOrderFilter] = useState('pending')
+  const navigate = useNavigate()
+  const [dashboard, setDashboard] = useState({ stats: {}, recentReservations: [], recentOrders: [] })
+  const [activeTab, setActiveTab] = useState('overview')
+  const [reservationList, setReservationList] = useState([])
+  const [reservationsStatus, setReservationsStatus] = useState('idle')
+  const [reservationsError, setReservationsError] = useState('')
+  const [orders, setOrders] = useState([])
+  const [ordersStatus, setOrdersStatus] = useState('idle')
+  const [ordersError, setOrdersError] = useState('')
   const [selectedReservationId, setSelectedReservationId] = useState('')
   const [selectedOrderId, setSelectedOrderId] = useState('')
-  const [selectedRecentReservationId, setSelectedRecentReservationId] = useState('')
-  const [selectedRecentOrderId, setSelectedRecentOrderId] = useState('')
-  const [selectedQueryOrder, setSelectedQueryOrder] = useState(null)
-  const [orderNotice, setOrderNotice] = useState('')
-  const [showAllOrders, setShowAllOrders] = useState(false)
-  const [allOrders, setAllOrders] = useState([])
-  const [allOrdersStatus, setAllOrdersStatus] = useState('idle')
-  const [allOrdersError, setAllOrdersError] = useState('')
+  const [adminReservations, setAdminReservations] = useState([])
+  const [adminOrders, setAdminOrders] = useState([])
+  const [adminReservationFilter, setAdminReservationFilter] = useState('pending')
+  const [adminOrderFilter, setAdminOrderFilter] = useState('pending')
+  const [selectedAdminReservationId, setSelectedAdminReservationId] = useState('')
+  const [selectedAdminOrderId, setSelectedAdminOrderId] = useState('')
+  const [adminMessage, setAdminMessage] = useState('')
+  const [adminError, setAdminError] = useState('')
+  const [busyId, setBusyId] = useState('')
 
-  const handleShowAllOrders = async () => {
-    setShowAllOrders(true)
-    if (allOrdersStatus === 'idle') {
-      await loadAllOrders()
-    }
-    window.setTimeout(() => {
-      const el = document.getElementById('all-orders')
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 0)
-  }
-
-  const queryOrderId = useMemo(() => {
-    const params = new URLSearchParams(location.search)
-    return params.get('order') || ''
-  }, [location.search])
-
-  const queryPlaced = useMemo(() => {
-    const params = new URLSearchParams(location.search)
-    return params.get('placed') === '1'
-  }, [location.search])
+  const query = useMemo(() => new URLSearchParams(location.search), [location.search])
+  const placedOrder = query.get('placed') === '1'
+  const queryOrderId = query.get('order') || ''
 
   useEffect(() => {
     if (!token) return
-    apiRequest('/api/auth/dashboard', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    apiRequest('/api/auth/dashboard', { headers: { Authorization: `Bearer ${token}` } })
       .then((data) => setDashboard(data))
       .catch(() => {})
   }, [token])
 
-  const loadAdminReservations = async () => {
-    if (!token || user?.role !== 'admin') return
-    const data = await apiRequest('/api/reservations/admin', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    setAdminReservations(data.reservations || [])
-  }
-
-  const loadAdminOrders = async () => {
-    if (!token || user?.role !== 'admin') return
-    const data = await apiRequest('/api/orders/admin', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    setAdminOrders(data.orders || [])
-  }
+  useEffect(() => {
+    if (placedOrder) setActiveTab('orders')
+  }, [placedOrder])
 
   useEffect(() => {
-    loadAdminReservations().catch(() => {})
-    loadAdminOrders().catch(() => {})
+    if (activeTab !== 'reservations' || reservationsStatus !== 'idle' || !token) return
+    setReservationsStatus('loading')
+    apiRequest('/api/reservations/my', { headers: { Authorization: `Bearer ${token}` } })
+      .then((data) => {
+        setReservationList(data.reservations || [])
+        setReservationsStatus('success')
+      })
+      .catch((error) => {
+        setReservationsError(error.message || 'Unable to load reservations.')
+        setReservationsStatus('error')
+      })
+  }, [activeTab, reservationsStatus, token])
+
+  useEffect(() => {
+    if (activeTab !== 'orders' || ordersStatus !== 'idle' || !token) return
+    setOrdersStatus('loading')
+    apiRequest('/api/orders/my', { headers: { Authorization: `Bearer ${token}` } })
+      .then((data) => {
+        setOrders(data.orders || [])
+        setOrdersStatus('success')
+      })
+      .catch((error) => {
+        setOrdersError(error.message || 'Unable to load orders.')
+        setOrdersStatus('error')
+      })
+  }, [activeTab, ordersStatus, token])
+
+  useEffect(() => {
+    if (!token || user?.role !== 'admin') return
+    apiRequest('/api/reservations/admin', { headers: { Authorization: `Bearer ${token}` } })
+      .then((data) => setAdminReservations(data.reservations || []))
+      .catch(() => {})
+    apiRequest('/api/orders/admin', { headers: { Authorization: `Bearer ${token}` } })
+      .then((data) => setAdminOrders(data.orders || []))
+      .catch(() => {})
   }, [token, user?.role])
 
-  useEffect(() => {
-    setOrderNotice(queryPlaced ? 'Order successful. You can view all details below.' : '')
-  }, [queryPlaced])
-
-  const loadAllOrders = async () => {
-    if (!token) return
-    setAllOrdersStatus('loading')
-    setAllOrdersError('')
-    try {
-      const data = await apiRequest('/api/orders/my', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      setAllOrders(data.orders || [])
-      setAllOrdersStatus('success')
-    } catch (error) {
-      setAllOrdersError(error.message || 'Unable to load orders.')
-      setAllOrdersStatus('error')
-    }
-  }
-
-  const initials = useMemo(() => {
-    const source = user?.name || 'U'
-    return source
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((chunk) => chunk[0]?.toUpperCase())
-      .join('')
-  }, [user?.name])
-
-  const avatarSrc = useMemo(() => {
-    if (!user?.avatarUrl) return ''
-    if (user.avatarUrl.startsWith('http')) return user.avatarUrl
-    return `${API_BASE_URL}${user.avatarUrl}`
-  }, [user?.avatarUrl])
-
-  const handleAdminStatusUpdate = async (reservationId, nextStatus) => {
-    try {
-      setUpdatingReservationId(reservationId)
-      setAdminActionError('')
-      setAdminActionMessage('')
-      const data = await apiRequest(`/api/reservations/${reservationId}/status`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ status: nextStatus }),
-      })
-      setAdminActionMessage(data?.message || `Reservation marked ${nextStatus}.`)
-      await loadAdminReservations()
-      setAdminFilter(nextStatus)
-      setSelectedReservationId(reservationId)
-    } catch (error) {
-      setAdminActionError(error.message || 'Unable to update reservation status.')
-    } finally {
-      setUpdatingReservationId('')
-    }
-  }
-
-  const handleAdminOrderStatusUpdate = async (orderId, nextStatus) => {
-    try {
-      setUpdatingOrderId(orderId)
-      setAdminActionError('')
-      setAdminActionMessage('')
-      const data = await apiRequest(`/api/orders/${orderId}/status`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ orderStatus: nextStatus }),
-      })
-      setAdminActionMessage(data?.message || `Order marked ${nextStatus}.`)
-      await loadAdminOrders()
-      setAdminOrderFilter(nextStatus)
-      setSelectedOrderId(orderId)
-    } catch (error) {
-      setAdminActionError(error.message || 'Unable to update order status.')
-    } finally {
-      setUpdatingOrderId('')
-    }
-  }
-
-  const reservationCounts = useMemo(() => {
-    const counts = { all: 0, pending: 0, confirmed: 0, cancelled: 0 }
-    for (const item of adminReservations) {
-      counts.all += 1
-      if (counts[item.status] !== undefined) counts[item.status] += 1
-    }
-    return counts
-  }, [adminReservations])
-
-  const filteredAdminReservations = useMemo(() => {
-    if (adminFilter === 'all') return adminReservations
-    return adminReservations.filter((item) => item.status === adminFilter)
-  }, [adminReservations, adminFilter])
-
-  const selectedReservation =
-    adminReservations.find((item) => item._id === selectedReservationId) || null
-
-  const orderCounts = useMemo(() => {
-    const counts = {
-      all: 0,
-      pending: 0,
-      confirmed: 0,
-      preparing: 0,
-      out_for_delivery: 0,
-      ready_for_pickup: 0,
-      completed: 0,
-      cancelled: 0,
-    }
-    for (const item of adminOrders) {
-      counts.all += 1
-      if (counts[item.orderStatus] !== undefined) counts[item.orderStatus] += 1
-    }
-    return counts
-  }, [adminOrders])
-
-  const filteredAdminOrders = useMemo(() => {
-    if (adminOrderFilter === 'all') return adminOrders
-    return adminOrders.filter((item) => item.orderStatus === adminOrderFilter)
-  }, [adminOrders, adminOrderFilter])
-
-  const selectedOrder = adminOrders.find((item) => item._id === selectedOrderId) || null
-  const selectedRecentReservation =
-    dashboard.recentReservations.find((item) => item._id === selectedRecentReservationId) || null
-  const selectedRecentOrderFromDashboard =
-    dashboard.recentOrders.find((item) => item._id === selectedRecentOrderId) || null
-  const selectedRecentOrder = selectedRecentOrderFromDashboard || selectedQueryOrder
+  const reservations = useMemo(() => {
+    if (reservationList.length) return reservationList
+    return dashboard.recentReservations || []
+  }, [dashboard.recentReservations, reservationList])
+  const recentOrders = useMemo(() => dashboard.recentOrders || [], [dashboard.recentOrders])
+  const allOrders = orders.length ? orders : recentOrders
 
   useEffect(() => {
-    if (!token || !queryOrderId) return
+    if (!selectedReservationId && reservations[0]?._id) setSelectedReservationId(reservations[0]._id)
+  }, [reservations, selectedReservationId])
 
-    const inDashboard = dashboard.recentOrders.find((item) => item._id === queryOrderId)
-    if (inDashboard) {
-      setSelectedRecentOrderId(inDashboard._id)
-      setSelectedQueryOrder(null)
-      return
-    }
+  useEffect(() => {
+    const nextSelectedId = queryOrderId || allOrders[0]?._id || ''
+    if (!selectedOrderId && nextSelectedId) setSelectedOrderId(nextSelectedId)
+  }, [allOrders, queryOrderId, selectedOrderId])
 
-    apiRequest('/api/orders/my', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((data) => {
-        const found = (data.orders || []).find((item) => item._id === queryOrderId) || null
-        setSelectedQueryOrder(found)
+  useEffect(() => {
+    if (!selectedAdminReservationId && adminReservations[0]?._id) setSelectedAdminReservationId(adminReservations[0]._id)
+  }, [adminReservations, selectedAdminReservationId])
+
+  useEffect(() => {
+    if (!selectedAdminOrderId && adminOrders[0]?._id) setSelectedAdminOrderId(adminOrders[0]._id)
+  }, [adminOrders, selectedAdminOrderId])
+
+  const initials = (user?.name || 'U')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('')
+
+  const avatarSrc = user?.avatarUrl
+    ? user.avatarUrl.startsWith('http')
+      ? user.avatarUrl
+      : `${API_BASE_URL}${user.avatarUrl}`
+    : ''
+
+  const tasks = getTasks(user)
+  const missingTasks = tasks.filter((task) => !task.complete)
+  const completion = Math.round(((tasks.length - missingTasks.length) / tasks.length) * 100)
+  const fullAddress = [user?.addressLine1, user?.addressLine2, user?.city, user?.stateRegion, user?.postalCode, user?.country].filter(Boolean).join(', ')
+  const preferences = [fmtTitle(user?.preferredContactMethod || 'email'), fmtTitle(user?.preferredDiningTime || 'flexible'), fmtTitle(user?.dietaryPreference || 'none')].join(' | ')
+  const selectedReservation = reservations.find((item) => item._id === selectedReservationId) || null
+  const selectedOrder = allOrders.find((item) => item._id === selectedOrderId) || null
+  const filteredAdminReservations = adminReservationFilter === 'all' ? adminReservations : adminReservations.filter((item) => item.status === adminReservationFilter)
+  const filteredAdminOrders = adminOrderFilter === 'all' ? adminOrders : adminOrders.filter((item) => item.orderStatus === adminOrderFilter)
+  const selectedAdminReservation = adminReservations.find((item) => item._id === selectedAdminReservationId) || null
+  const selectedAdminOrder = adminOrders.find((item) => item._id === selectedAdminOrderId) || null
+
+  const reservationCounts = adminReservations.reduce((acc, item) => {
+    acc.all += 1
+    acc[item.status] = (acc[item.status] || 0) + 1
+    return acc
+  }, { all: 0, pending: 0, confirmed: 0, cancelled: 0 })
+
+  const orderCounts = adminOrders.reduce((acc, item) => {
+    acc.all += 1
+    acc[item.orderStatus] = (acc[item.orderStatus] || 0) + 1
+    return acc
+  }, { all: 0, pending: 0, confirmed: 0, preparing: 0, out_for_delivery: 0, ready_for_pickup: 0, completed: 0, cancelled: 0 })
+
+  const runAdminUpdate = async (path, payload, reload) => {
+    try {
+      setBusyId(payload.id)
+      setAdminMessage('')
+      setAdminError('')
+      const data = await apiRequest(path, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload.body),
       })
-      .catch(() => {})
-  }, [dashboard.recentOrders, queryOrderId, token])
+      setAdminMessage(data.message || 'Updated successfully.')
+      const refreshed = await apiRequest(reload, { headers: { Authorization: `Bearer ${token}` } })
+      if (reload.includes('reservations')) setAdminReservations(refreshed.reservations || [])
+      if (reload.includes('orders')) setAdminOrders(refreshed.orders || [])
+    } catch (error) {
+      setAdminError(error.message || 'Unable to update item.')
+    } finally {
+      setBusyId('')
+    }
+  }
+
+  const stats = [
+    ['Reservations', dashboard.stats.totalReservations || 0, `${dashboard.stats.pendingReservations || 0} pending`],
+    ['Orders', dashboard.stats.totalOrders || 0, `${dashboard.stats.activeOrders || 0} active`],
+    ['Profile', `${completion}%`, missingTasks.length ? `${missingTasks.length} tasks left` : 'Complete'],
+    ['Member Since', fmtDate(dashboard.stats.memberSince || user?.createdAt), user?.isEmailVerified ? 'Verified' : 'Not verified'],
+  ]
+  const nextTask = missingTasks[0]?.label || 'Everything is set'
+  const quickHighlights = [
+    ['Next step', nextTask, missingTasks.length ? 'Complete this next to improve checkout and booking flow.' : 'Your account is ready to use.'],
+    ['Recent activity', pluralize((dashboard.stats.totalOrders || 0) + (dashboard.stats.totalReservations || 0), 'action'), `${pluralize(dashboard.stats.totalOrders || 0, 'order')} and ${pluralize(dashboard.stats.totalReservations || 0, 'reservation')}.`],
+    ['Account mode', user?.role === 'admin' ? 'Admin access' : 'Guest dashboard', user?.role === 'admin' ? 'Manage reservations and order operations from here.' : 'Use this area to manage orders, bookings, and preferences.'],
+  ]
+  const orderItemSummary = selectedOrder?.items?.map((item) => `${item.quantity}x ${item.name}`).join(', ') || 'No order items recorded.'
+  const adminOrderItemSummary = selectedAdminOrder?.items?.map((item) => `${item.quantity}x ${item.name}`).join(', ') || 'No order items recorded.'
+  const canCancelReservation = ['pending', 'confirmed'].includes(selectedReservation?.status)
+  const canCancelOrder = ['pending', 'confirmed'].includes(selectedOrder?.orderStatus)
+  const premiumMetrics = [
+    ['Completion', `${completion}%`, missingTasks.length ? `${missingTasks.length} items left` : 'Fully set up'],
+    ['Dining style', fmtTitle(user?.preferredDiningTime || 'flexible'), fmtTitle(user?.dietaryPreference || 'none')],
+    ['Contact lane', fmtTitle(user?.preferredContactMethod || 'email'), user?.marketingOptIn ? 'Campaigns on' : 'Campaigns off'],
+  ]
+
+  const handleRepeatOrder = () => {
+    if (!selectedOrder?.items?.length) return
+    replaceCart(selectedOrder.items)
+    navigate('/order')
+  }
+
+  const handleCancelReservation = async () => {
+    if (!selectedReservation?._id || !token) return
+    try {
+      setBusyId(selectedReservation._id)
+      setReservationsError('')
+      const data = await apiRequest(`/api/reservations/${selectedReservation._id}/cancel`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const updatedReservation = data.reservation
+      setReservationList((prev) => prev.map((item) => (item._id === updatedReservation._id ? updatedReservation : item)))
+      setDashboard((prev) => ({
+        ...prev,
+        recentReservations: (prev.recentReservations || []).map((item) => (item._id === updatedReservation._id ? updatedReservation : item)),
+      }))
+    } catch (error) {
+      setReservationsError(error.message || 'Unable to cancel reservation.')
+    } finally {
+      setBusyId('')
+    }
+  }
+
+  const handleCancelOrder = async () => {
+    if (!selectedOrder?._id || !token) return
+    try {
+      setBusyId(selectedOrder._id)
+      setOrdersError('')
+      const data = await apiRequest(`/api/orders/${selectedOrder._id}/cancel`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const updatedOrder = data.order
+      setOrders((prev) => prev.map((item) => (item._id === updatedOrder._id ? updatedOrder : item)))
+      setDashboard((prev) => ({
+        ...prev,
+        recentOrders: (prev.recentOrders || []).map((item) => (item._id === updatedOrder._id ? updatedOrder : item)),
+      }))
+    } catch (error) {
+      setOrdersError(error.message || 'Unable to cancel order.')
+    } finally {
+      setBusyId('')
+    }
+  }
 
   return (
     <section className="section">
-      <div className="container profile-layout">
-        <aside className="profile-summary" id="profile-summary">
-          <div className="profile-avatar-wrap">
-            {avatarSrc ? (
-              <img className="profile-avatar" src={avatarSrc} alt={user?.name || 'Profile'} />
-            ) : (
-              <div className="profile-avatar profile-avatar-fallback">{initials}</div>
-            )}
-          </div>
-          <h3>{user?.name || 'User'}</h3>
-          <p>{user?.email || '-'}</p>
-          <div className="profile-badge-row">
-            <span className="pill">Role: {user?.role || 'user'}</span>
-            <span className="pill">
-              {user?.isEmailVerified ? 'Email Verified' : 'Email Not Verified'}
-            </span>
-          </div>
-          <div className="panel" style={{ marginTop: '18px' }}>
-            <p><strong>Profile completion:</strong> {profileCompletion(user)}%</p>
-            <p><strong>Joined:</strong> {formatDate(user?.createdAt)}</p>
-            <p><strong>Last updated:</strong> {formatDate(user?.updatedAt)}</p>
-          </div>
-          <button className="btn btn-outline" type="button" onClick={logout}>
-            Logout
-          </button>
-        </aside>
-
-        <div>
-          <div className="dashboard-grid">
-            <div
-              className="panel dashboard-item-clickable"
-              role="button"
-              tabIndex={0}
-              onClick={() => {
-                const el = document.getElementById('recent-reservations')
-                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              }}
-              onKeyDown={(event) =>
-                onKeyboardActivate(event, () => {
-                  const el = document.getElementById('recent-reservations')
-                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                })
-              }
-            >
-              <p className="form-label">Total Reservations</p>
-              <h3 style={{ marginTop: 0 }}>{dashboard.stats.totalReservations}</h3>
-            </div>
-            <div
-              className="panel dashboard-item-clickable"
-              role="button"
-              tabIndex={0}
-              onClick={() => {
-                const el = document.getElementById('recent-reservations')
-                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              }}
-              onKeyDown={(event) =>
-                onKeyboardActivate(event, () => {
-                  const el = document.getElementById('recent-reservations')
-                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                })
-              }
-            >
-              <p className="form-label">Pending Reservations</p>
-              <h3 style={{ marginTop: 0 }}>{dashboard.stats.pendingReservations}</h3>
-            </div>
-            <div
-              className="panel dashboard-item-clickable"
-              role="button"
-              tabIndex={0}
-              onClick={() => {
-                const el = document.getElementById('profile-summary')
-                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              }}
-              onKeyDown={(event) =>
-                onKeyboardActivate(event, () => {
-                  const el = document.getElementById('profile-summary')
-                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                })
-              }
-            >
-              <p className="form-label">Profile Completion</p>
-              <h3 style={{ marginTop: 0 }}>{dashboard.stats.profileCompletion}%</h3>
-            </div>
-            <div
-              className="panel dashboard-item-clickable"
-              role="button"
-              tabIndex={0}
-              onClick={handleShowAllOrders}
-              onKeyDown={(event) => onKeyboardActivate(event, handleShowAllOrders)}
-            >
-              <p className="form-label">Total Orders</p>
-              <h3 style={{ marginTop: 0 }}>{dashboard.stats.totalOrders}</h3>
-            </div>
-            <div
-              className="panel dashboard-item-clickable"
-              role="button"
-              tabIndex={0}
-              onClick={() => {
-                const el = document.getElementById('recent-orders')
-                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              }}
-              onKeyDown={(event) =>
-                onKeyboardActivate(event, () => {
-                  const el = document.getElementById('recent-orders')
-                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                })
-              }
-            >
-              <p className="form-label">Active Orders</p>
-              <h3 style={{ marginTop: 0 }}>{dashboard.stats.activeOrders}</h3>
-            </div>
-            <div
-              className="panel dashboard-item-clickable"
-              role="button"
-              tabIndex={0}
-              onClick={() => {
-                const el = document.getElementById('recent-orders')
-                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              }}
-              onKeyDown={(event) =>
-                onKeyboardActivate(event, () => {
-                  const el = document.getElementById('recent-orders')
-                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                })
-              }
-            >
-              <p className="form-label">Paid Orders</p>
-              <h3 style={{ marginTop: 0 }}>{dashboard.stats.paidOrders}</h3>
-            </div>
-            <div
-              className="panel dashboard-item-clickable"
-              role="button"
-              tabIndex={0}
-              onClick={() => {
-                const el = document.getElementById('profile-summary')
-                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              }}
-              onKeyDown={(event) =>
-                onKeyboardActivate(event, () => {
-                  const el = document.getElementById('profile-summary')
-                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                })
-              }
-            >
-              <p className="form-label">Member Since</p>
-              <h3 style={{ marginTop: 0 }}>{formatDate(dashboard.stats.memberSince)}</h3>
-            </div>
-          </div>
-
-          <div className="panel" style={{ marginTop: '16px' }} id="recent-reservations">
-            <h3 style={{ marginTop: 0 }}>Recent Reservations</h3>
-            {dashboard.recentReservations.length === 0 && <p>No reservations yet.</p>}
-            {dashboard.recentReservations.length > 0 && (
-              <div className="dashboard-list">
-                {dashboard.recentReservations.map((item) => (
-                  <div
-                    key={item._id}
-                    role="button"
-                    tabIndex={0}
-                    className={`dashboard-item dashboard-item-clickable ${selectedRecentReservationId === item._id ? 'active' : ''}`}
-                    onClick={() => setSelectedRecentReservationId(item._id)}
-                    onKeyDown={(event) =>
-                      onKeyboardActivate(event, () => setSelectedRecentReservationId(item._id))
-                    }
-                  >
-                    <span>{item.date} at {item.time}</span>
-                    <span>{item.guests} guest(s)</span>
-                    <span>{item.status}</span>
+      <div className="container profile-page">
+        <div className="profile-shell">
+          <aside className="profile-sidebar">
+            <div className="profile-identity-card">
+              <div className="profile-identity-top">
+                {avatarSrc ? <img className="profile-identity-avatar" src={avatarSrc} alt={user?.name || 'Profile'} /> : <div className="profile-identity-avatar profile-avatar-fallback">{initials}</div>}
+                <div className="profile-identity-copy">
+                  <p className="profile-eyebrow">Account Overview</p>
+                  <h2>{user?.name || 'User'}</h2>
+                  <p>{user?.email || '-'}</p>
+                </div>
+              </div>
+              <div className="profile-account-strip">
+                <div>
+                  <span className="profile-meta-label">Status</span>
+                  <strong>{user?.isEmailVerified ? 'Verified and active' : 'Needs verification'}</strong>
+                </div>
+                <div>
+                  <span className="profile-meta-label">Location</span>
+                  <strong>{[user?.city, user?.country].filter(Boolean).join(', ') || 'Add your location'}</strong>
+                </div>
+              </div>
+              <div className="profile-identity-meta">
+                <div>
+                  <span className="profile-meta-label">Phone</span>
+                  <strong>{user?.phone || 'Add your phone number'}</strong>
+                </div>
+                <div>
+                  <span className="profile-meta-label">Preferences</span>
+                  <strong>{preferences}</strong>
+                </div>
+                <div>
+                  <span className="profile-meta-label">Saved Address</span>
+                  <strong>{fullAddress || 'No address saved yet'}</strong>
+                </div>
+              </div>
+              <div className="profile-completion-card">
+                <div className="profile-completion-header">
+                  <div>
+                    <p className="profile-eyebrow">Completion</p>
+                    <h3>{completion}% complete</h3>
                   </div>
-                ))}
+                  <span className="profile-completion-score">{completion}%</span>
+                </div>
+                <div className="profile-progress-track">
+                  <span className="profile-progress-fill" style={{ width: `${completion}%` }} />
+                </div>
+                <ul className="profile-task-list">
+                  {tasks.map((task) => (
+                    <li key={task.id} className={task.complete ? 'is-complete' : ''}>
+                      <span className="profile-task-dot" />
+                      <span>{task.label}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-            )}
-            {selectedRecentReservation && (
-              <div className="panel" style={{ marginTop: '12px' }}>
-                <h4 style={{ marginTop: 0 }}>
-                  Reservation Details: {formatReservationNumber(selectedRecentReservation._id)}
-                </h4>
-                <p><strong>Date/Time:</strong> {selectedRecentReservation.date} at {selectedRecentReservation.time}</p>
-                <p><strong>Guests:</strong> {selectedRecentReservation.guests}</p>
-                <p><strong>Status:</strong> {selectedRecentReservation.status}</p>
-                <p><strong>Created:</strong> {formatDate(selectedRecentReservation.createdAt)}</p>
+              <div className="profile-sidebar-actions">
+                <Link className="btn" to="/profile/edit">Edit Profile</Link>
+                <Link className="btn btn-outline" to="/reservations">Book a Table</Link>
+                <button className="btn btn-muted" type="button" onClick={logout}>Log Out</button>
               </div>
-            )}
-          </div>
+            </div>
+          </aside>
 
-          <div className="panel" style={{ marginTop: '16px' }} id="recent-orders">
-            <h3 style={{ marginTop: 0 }}>Recent Orders</h3>
-            {orderNotice && <div className="form-success">{orderNotice}</div>}
-            {dashboard.recentOrders.length === 0 && <p>No orders yet.</p>}
-            {dashboard.recentOrders.length > 0 && (
-              <div className="dashboard-list">
-                {dashboard.recentOrders.map((item) => (
-                  <div
-                    key={item._id}
-                    role="button"
-                    tabIndex={0}
-                    className={`dashboard-item dashboard-item-clickable ${selectedRecentOrderId === item._id ? 'active' : ''}`}
-                    onClick={() => setSelectedRecentOrderId(item._id)}
-                    onKeyDown={(event) =>
-                      onKeyboardActivate(event, () => setSelectedRecentOrderId(item._id))
-                    }
-                  >
-                    <span>
-                      <strong>{formatOrderNumber(item._id)}</strong><br />
-                      {item.items?.[0]?.name || 'Order Item'}
-                      {item.items?.length > 1 ? ` +${item.items.length - 1} more` : ''}
-                    </span>
-                    <span>{item.deliveryType}</span>
-                    <span>{item.orderStatus} / {item.paymentStatus}</span>
-                    <span>
-                      {formatCurrency(item.total)}<br />
-                      <Link
-                        className="btn btn-outline"
-                        to={`/orders/${item._id}`}
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        View Details
-                      </Link>
-                    </span>
+          <div className="profile-main">
+            {completion < 100 && (
+              <div className="panel profile-alert-card">
+                <div>
+                  <p className="profile-eyebrow">Profile Attention</p>
+                  <h3>Finish the remaining account steps.</h3>
+                  <p className="profile-completion-copy">
+                    {missingTasks.length} item{missingTasks.length === 1 ? '' : 's'} still need attention. Start with: {nextTask}.
+                  </p>
+                </div>
+                <Link className="btn" to="/profile/edit">Complete Profile</Link>
+              </div>
+            )}
+
+            <div className="panel profile-hero">
+              <div className="profile-hero-copy">
+                <p className="profile-eyebrow">Delxta Dashboard</p>
+                <h1>Profile and activity in one place.</h1>
+                <p>{missingTasks.length ? `Complete ${missingTasks.length} more ${missingTasks.length === 1 ? 'step' : 'steps'} to finish your account.` : 'Your profile is complete. You can book and order without friction.'}</p>
+                <div className="profile-hero-highlights">
+                  <div className="profile-highlight-chip">
+                    <span className="profile-meta-label">Bio</span>
+                    <strong>{user?.bio || 'Add a short profile bio'}</strong>
                   </div>
-                ))}
+                  <div className="profile-highlight-chip">
+                    <span className="profile-meta-label">Verification</span>
+                    <strong>{user?.isEmailVerified ? 'Verified email' : 'Verification pending'}</strong>
+                  </div>
+                  <div className="profile-highlight-chip">
+                    <span className="profile-meta-label">Marketing</span>
+                    <strong>{user?.marketingOptIn ? 'Subscribed' : 'Quiet mode'}</strong>
+                  </div>
+                </div>
               </div>
-            )}
-            {selectedRecentOrder && (
-              <div className="panel" style={{ marginTop: '12px' }}>
-                <h4 style={{ marginTop: 0 }}>Order Details: {formatOrderNumber(selectedRecentOrder._id)}</h4>
-                <p><strong>Delivery:</strong> {selectedRecentOrder.deliveryType}</p>
-                <p><strong>Payment:</strong> {selectedRecentOrder.paymentMethod} ({selectedRecentOrder.paymentStatus})</p>
-                <p><strong>Status:</strong> {selectedRecentOrder.orderStatus}</p>
-                <p><strong>Total:</strong> {formatCurrency(selectedRecentOrder.total)}</p>
-                <p>
-                  <strong>Items:</strong>{' '}
-                  {(selectedRecentOrder.items || [])
-                    .map((it) => `${it.name} (${it.servingLabel || it.servingOption}) x${it.quantity}`)
-                    .join(', ') || '-'}
-                </p>
-                <p><strong>Created:</strong> {formatDate(selectedRecentOrder.createdAt)}</p>
-                <Link className="btn btn-outline" to={`/orders/${selectedRecentOrder._id}`}>
-                  Open Full Order Page
-                </Link>
+              <div className="profile-hero-side">
+                <div className="profile-hero-actions">
+                  <Link className="btn" to="/menu">Order Food</Link>
+                  <Link className="btn btn-outline" to="/profile/edit">Manage Account</Link>
+                </div>
+                <div className="profile-premium-panel">
+                  <p className="profile-eyebrow">Concierge Snapshot</p>
+                  <div className="profile-premium-metrics">
+                    {premiumMetrics.map(([label, value, detail]) => (
+                      <div key={label}>
+                        <span className="profile-meta-label">{label}</span>
+                        <strong>{value}</strong>
+                        <p>{detail}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-            )}
-            <div style={{ marginTop: '12px' }}>
-              <button
-                type="button"
-                className="btn btn-outline"
-                onClick={() => {
-                  const next = !showAllOrders
-                  setShowAllOrders(next)
-                  if (next && allOrdersStatus === 'idle') {
-                    loadAllOrders()
-                  }
-                }}
-              >
-                {showAllOrders ? 'Hide All Orders' : 'View All Orders'}
-              </button>
+            </div>
+
+            <div className="profile-stats-grid">
+              {stats.map(([label, value, detail]) => (
+                <div className="panel profile-stat-card" key={label}>
+                  <p className="profile-stat-label">{label}</p>
+                  <h3>{value}</h3>
+                  <p className="profile-stat-detail">{detail}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="profile-quick-grid">
+              {quickHighlights.map(([label, value, detail]) => (
+                <div className="panel profile-quick-card" key={label}>
+                  <p className="profile-stat-label">{label}</p>
+                  <h3>{value}</h3>
+                  <p className="profile-stat-detail">{detail}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="panel profile-activity-card">
+              <div className="profile-activity-header">
+                <div>
+                  <p className="profile-eyebrow">Activity</p>
+                  <h3>Profile details, orders, and reservations</h3>
+                </div>
+                <div className="profile-tabs">
+                  <button className={`profile-tab ${activeTab === 'overview' ? 'active' : ''}`} type="button" onClick={() => setActiveTab('overview')}>Overview</button>
+                  <button className={`profile-tab ${activeTab === 'reservations' ? 'active' : ''}`} type="button" onClick={() => setActiveTab('reservations')}>Reservations</button>
+                  <button className={`profile-tab ${activeTab === 'orders' ? 'active' : ''}`} type="button" onClick={() => setActiveTab('orders')}>Orders</button>
+                  {user?.role === 'admin' && <button className={`profile-tab ${activeTab === 'admin' ? 'active' : ''}`} type="button" onClick={() => setActiveTab('admin')}>Admin</button>}
+                </div>
+              </div>
+
+              {activeTab === 'overview' && (
+                <div className="profile-content-grid">
+                  <div className="panel profile-list-panel">
+                    <div className="profile-list-head">
+                      <div>
+                        <p className="profile-eyebrow">Saved Details</p>
+                        <h4>Account information</h4>
+                      </div>
+                      <Link className="profile-inline-link profile-inline-action" to="/profile/edit">Edit</Link>
+                    </div>
+                    <dl className="profile-detail-list">
+                      <div><dt>Email</dt><dd>{user?.email || '-'}</dd></div>
+                      <div><dt>Phone</dt><dd>{user?.phone || '-'}</dd></div>
+                      <div><dt>Gender</dt><dd>{fmtTitle(user?.gender || 'prefer_not_to_say')}</dd></div>
+                      <div><dt>City</dt><dd>{user?.city || '-'}</dd></div>
+                      <div className="profile-detail-full"><dt>Address</dt><dd>{fullAddress || 'No saved address yet.'}</dd></div>
+                      <div className="profile-detail-full"><dt>Bio</dt><dd>{user?.bio || 'No bio added yet.'}</dd></div>
+                    </dl>
+                  </div>
+
+                  <div className="panel profile-list-panel">
+                    <div className="profile-list-head">
+                      <div>
+                        <p className="profile-eyebrow">Highlights</p>
+                        <h4>Current account state</h4>
+                      </div>
+                    </div>
+                    <div className="profile-health-grid">
+                      <div className="profile-health-item"><strong>{dashboard.stats.pendingReservations || 0}</strong><p>Pending reservations</p></div>
+                      <div className="profile-health-item"><strong>{dashboard.stats.activeOrders || 0}</strong><p>Active orders</p></div>
+                      <div className="profile-health-item"><strong>{dashboard.stats.paidOrders || 0}</strong><p>Paid orders</p></div>
+                    </div>
+                    <div className="profile-detail-stack">
+                      <div><span className="profile-meta-label">Preferred contact</span><strong>{fmtTitle(user?.preferredContactMethod || 'email')}</strong></div>
+                      <div><span className="profile-meta-label">Preferred dining time</span><strong>{fmtTitle(user?.preferredDiningTime || 'flexible')}</strong></div>
+                      <div><span className="profile-meta-label">Dietary preference</span><strong>{fmtTitle(user?.dietaryPreference || 'none')}</strong></div>
+                    </div>
+                    <div className="profile-edit-actions">
+                      <Link className="btn btn-outline" to="/profile/edit">Update preferences</Link>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'reservations' && (
+                <div className="profile-split-view">
+                  <div className="profile-activity-list">
+                    {reservationsError && <div className="form-error">{reservationsError}</div>}
+                    {reservationsStatus === 'loading' ? <p className="loading">Loading reservations...</p> : reservations.length ? reservations.map((item) => (
+                      <button key={item._id} className={`profile-activity-item ${selectedReservationId === item._id ? 'active' : ''}`} type="button" onClick={() => setSelectedReservationId(item._id)}>
+                        <div>
+                          <strong>{fmtReservation(item._id)}</strong>
+                          <span className={`status-badge ${getTone(item.status)}`}>{fmtTitle(item.status)}</span>
+                        </div>
+                        <p>{item.date} at {item.time}</p>
+                        <span>{item.guests} guests</span>
+                      </button>
+                    )) : <div className="profile-empty-state"><p>No reservations yet.</p><span>Your recent table bookings will appear here.</span></div>}
+                  </div>
+
+                  <div className="panel profile-detail-panel">
+                    {selectedReservation ? (
+                      <>
+                        <div className="profile-section-head">
+                          <div>
+                            <p className="profile-eyebrow">Reservation Detail</p>
+                            <h4>{fmtReservation(selectedReservation._id)}</h4>
+                          </div>
+                          <span className={`status-badge ${getTone(selectedReservation.status)}`}>{fmtTitle(selectedReservation.status)}</span>
+                        </div>
+                        <div className="profile-detail-stack">
+                          <div><span className="profile-meta-label">Date</span><strong>{selectedReservation.date}</strong></div>
+                          <div><span className="profile-meta-label">Time</span><strong>{selectedReservation.time}</strong></div>
+                          <div><span className="profile-meta-label">Guests</span><strong>{selectedReservation.guests}</strong></div>
+                          <div><span className="profile-meta-label">Requests</span><strong>{selectedReservation.requests || 'No extra requests.'}</strong></div>
+                          <div><span className="profile-meta-label">Created</span><strong>{fmtDateTime(selectedReservation.createdAt)}</strong></div>
+                        </div>
+                        <div className="profile-edit-actions">
+                          <Link
+                            className="btn btn-outline"
+                            to={`/reservations?date=${encodeURIComponent(selectedReservation.date || '')}&time=${encodeURIComponent(selectedReservation.time || '')}&guests=${encodeURIComponent(selectedReservation.guests || '')}&requests=${encodeURIComponent(selectedReservation.requests || '')}`}
+                          >
+                            Book Similar
+                          </Link>
+                          {canCancelReservation && (
+                            <button className="btn btn-muted" type="button" onClick={handleCancelReservation} disabled={busyId === selectedReservation._id}>
+                              {busyId === selectedReservation._id ? 'Cancelling...' : 'Cancel Reservation'}
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    ) : <div className="profile-empty-state"><p>Select a reservation.</p><span>Choose one from the list to inspect it.</span></div>}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'orders' && (
+                <div className="profile-split-view">
+                  <div className="profile-activity-list">
+                    {placedOrder && <div className="form-success">Order successful. You can review it below.</div>}
+                    {ordersError && <div className="form-error">{ordersError}</div>}
+                    {ordersStatus === 'loading' ? <p className="loading">Loading orders...</p> : allOrders.length ? allOrders.map((item) => (
+                      <button key={item._id} className={`profile-list-card ${selectedOrderId === item._id ? 'active' : ''}`} type="button" onClick={() => setSelectedOrderId(item._id)}>
+                        <div className="profile-list-card-top">
+                          <strong>{fmtOrder(item._id)}</strong>
+                          <span className={`status-badge ${getTone(item.orderStatus)}`}>{fmtTitle(item.orderStatus)}</span>
+                        </div>
+                        <p>{fmtMoney(item.total)}</p>
+                        <span>{fmtTitle(item.deliveryType)} | {fmtTitle(item.paymentStatus)}</span>
+                      </button>
+                    )) : <div className="profile-empty-state"><p>No orders yet.</p><span>Your recent orders will appear here after checkout.</span></div>}
+                  </div>
+
+                  <div className="panel profile-detail-panel">
+                    {selectedOrder ? (
+                      <>
+                        <div className="profile-section-head">
+                          <div>
+                            <p className="profile-eyebrow">Order Detail</p>
+                            <h4>{fmtOrder(selectedOrder._id)}</h4>
+                          </div>
+                          <span className={`status-badge ${getTone(selectedOrder.orderStatus)}`}>{fmtTitle(selectedOrder.orderStatus)}</span>
+                        </div>
+                        <div className="profile-detail-stack">
+                          <div><span className="profile-meta-label">Placed</span><strong>{fmtDateTime(selectedOrder.createdAt)}</strong></div>
+                          <div><span className="profile-meta-label">Payment</span><strong>{fmtTitle(selectedOrder.paymentMethod)} ({fmtTitle(selectedOrder.paymentStatus)})</strong></div>
+                          <div><span className="profile-meta-label">Delivery</span><strong>{fmtTitle(selectedOrder.deliveryType)}</strong></div>
+                          <div><span className="profile-meta-label">Items</span><strong>{selectedOrder.items?.length || 0}</strong></div>
+                          <div><span className="profile-meta-label">Total</span><strong>{fmtMoney(selectedOrder.total)}</strong></div>
+                          <div><span className="profile-meta-label">Summary</span><strong>{orderItemSummary}</strong></div>
+                        </div>
+                        <div className="profile-edit-actions">
+                          <Link className="btn" to={`/orders/${selectedOrder._id}`}>View Full Order</Link>
+                          <button className="btn btn-outline" type="button" onClick={handleRepeatOrder}>Order Again</button>
+                          {canCancelOrder && (
+                            <button className="btn btn-muted" type="button" onClick={handleCancelOrder} disabled={busyId === selectedOrder._id}>
+                              {busyId === selectedOrder._id ? 'Cancelling...' : 'Cancel Order'}
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    ) : <div className="profile-empty-state"><p>Select an order.</p><span>Choose one from the list to inspect it.</span></div>}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'admin' && user?.role === 'admin' && (
+                <div className="profile-admin-stack">
+                  {(adminMessage || adminError) && (
+                    <div>
+                      {adminMessage && <div className="form-success">{adminMessage}</div>}
+                      {adminError && <div className="form-error">{adminError}</div>}
+                    </div>
+                  )}
+
+                  <div className="profile-content-grid">
+                    <div className="panel profile-activity-panel">
+                      <div className="profile-list-head">
+                        <div>
+                          <p className="profile-eyebrow">Reservations Admin</p>
+                          <h4>Manage incoming table bookings</h4>
+                        </div>
+                      </div>
+
+                      <div className="admin-filter-row">
+                        {['all', ...reservationStatuses].map((status) => (
+                          <button
+                            key={status}
+                            className={`admin-filter-btn ${adminReservationFilter === status ? 'active' : ''}`}
+                            type="button"
+                            onClick={() => setAdminReservationFilter(status)}
+                          >
+                            {fmtTitle(status)} ({reservationCounts[status] || 0})
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="profile-split-view">
+                        <div className="profile-activity-list">
+                          {filteredAdminReservations.length ? filteredAdminReservations.map((item) => (
+                            <button
+                              key={item._id}
+                              className={`profile-activity-item ${selectedAdminReservationId === item._id ? 'active' : ''}`}
+                              type="button"
+                              onClick={() => setSelectedAdminReservationId(item._id)}
+                            >
+                              <div>
+                                <strong>{item.name || fmtReservation(item._id)}</strong>
+                                <span className={`status-badge ${getTone(item.status)}`}>{fmtTitle(item.status)}</span>
+                              </div>
+                              <p>{item.date} at {item.time}</p>
+                              <span>{item.guests} guests</span>
+                            </button>
+                          )) : <div className="profile-empty-state"><p>No reservations found.</p><span>Nothing matches the selected filter.</span></div>}
+                        </div>
+
+                        <div className="panel profile-detail-panel">
+                          {selectedAdminReservation ? (
+                            <>
+                              <div className="profile-section-head">
+                                <div>
+                                  <p className="profile-eyebrow">Reservation Manager</p>
+                                  <h4>{selectedAdminReservation.name || fmtReservation(selectedAdminReservation._id)}</h4>
+                                </div>
+                                <span className={`status-badge ${getTone(selectedAdminReservation.status)}`}>{fmtTitle(selectedAdminReservation.status)}</span>
+                              </div>
+                              <div className="profile-detail-stack">
+                                <div><span className="profile-meta-label">Guest</span><strong>{selectedAdminReservation.name || '-'}</strong></div>
+                                <div><span className="profile-meta-label">Email</span><strong>{selectedAdminReservation.email || '-'}</strong></div>
+                                <div><span className="profile-meta-label">Phone</span><strong>{selectedAdminReservation.phone || '-'}</strong></div>
+                                <div><span className="profile-meta-label">Schedule</span><strong>{selectedAdminReservation.date} at {selectedAdminReservation.time}</strong></div>
+                                <div><span className="profile-meta-label">Guests</span><strong>{selectedAdminReservation.guests || 0}</strong></div>
+                                <div><span className="profile-meta-label">Requests</span><strong>{selectedAdminReservation.requests || 'No extra requests.'}</strong></div>
+                                <div><span className="profile-meta-label">Created</span><strong>{fmtDateTime(selectedAdminReservation.createdAt)}</strong></div>
+                              </div>
+                              <div className="admin-actions card-action-btn">
+                                {reservationStatuses.map((status) => (
+                                  <button
+                                    key={status}
+                                    className={`admin-filter-btn ${selectedAdminReservation.status === status ? 'active' : ''}`}
+                                    type="button"
+                                    disabled={busyId === selectedAdminReservation._id}
+                                    onClick={() => runAdminUpdate(
+                                      `/api/reservations/${selectedAdminReservation._id}/status`,
+                                      { id: selectedAdminReservation._id, body: { status } },
+                                      '/api/reservations/admin'
+                                    )}
+                                  >
+                                    {busyId === selectedAdminReservation._id && selectedAdminReservation.status !== status
+                                      ? 'Updating...'
+                                      : fmtTitle(status)}
+                                  </button>
+                                ))}
+                              </div>
+                            </>
+                          ) : <div className="profile-empty-state"><p>Select a reservation.</p><span>Choose one to update its status.</span></div>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="panel profile-activity-panel">
+                      <div className="profile-list-head">
+                        <div>
+                          <p className="profile-eyebrow">Orders Admin</p>
+                          <h4>Track kitchen and delivery flow</h4>
+                        </div>
+                      </div>
+
+                      <div className="admin-filter-row">
+                        {['all', ...orderStatuses].map((status) => (
+                          <button
+                            key={status}
+                            className={`admin-filter-btn ${adminOrderFilter === status ? 'active' : ''}`}
+                            type="button"
+                            onClick={() => setAdminOrderFilter(status)}
+                          >
+                            {fmtTitle(status)} ({orderCounts[status] || 0})
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="profile-split-view">
+                        <div className="profile-activity-list">
+                          {filteredAdminOrders.length ? filteredAdminOrders.map((item) => (
+                            <button
+                              key={item._id}
+                              className={`profile-list-card ${selectedAdminOrderId === item._id ? 'active' : ''}`}
+                              type="button"
+                              onClick={() => setSelectedAdminOrderId(item._id)}
+                            >
+                              <div className="profile-list-card-top">
+                                <strong>{fmtOrder(item._id)}</strong>
+                                <span className={`status-badge ${getTone(item.orderStatus)}`}>{fmtTitle(item.orderStatus)}</span>
+                              </div>
+                              <p>{item.customerName || item.email || 'Customer'}</p>
+                              <span>{fmtMoney(item.total)} | {fmtTitle(item.paymentStatus)}</span>
+                            </button>
+                          )) : <div className="profile-empty-state"><p>No orders found.</p><span>Nothing matches the selected filter.</span></div>}
+                        </div>
+
+                        <div className="panel profile-detail-panel">
+                          {selectedAdminOrder ? (
+                            <>
+                              <div className="profile-section-head">
+                                <div>
+                                  <p className="profile-eyebrow">Order Manager</p>
+                                  <h4>{fmtOrder(selectedAdminOrder._id)}</h4>
+                                </div>
+                                <span className={`status-badge ${getTone(selectedAdminOrder.orderStatus)}`}>{fmtTitle(selectedAdminOrder.orderStatus)}</span>
+                              </div>
+                              <div className="profile-detail-stack">
+                                <div><span className="profile-meta-label">Customer</span><strong>{selectedAdminOrder.customerName || '-'}</strong></div>
+                                <div><span className="profile-meta-label">Email</span><strong>{selectedAdminOrder.email || '-'}</strong></div>
+                                <div><span className="profile-meta-label">Phone</span><strong>{selectedAdminOrder.phone || '-'}</strong></div>
+                                <div><span className="profile-meta-label">Placed</span><strong>{fmtDateTime(selectedAdminOrder.createdAt)}</strong></div>
+                                <div><span className="profile-meta-label">Delivery</span><strong>{fmtTitle(selectedAdminOrder.deliveryType)}</strong></div>
+                                <div><span className="profile-meta-label">Payment</span><strong>{fmtTitle(selectedAdminOrder.paymentMethod)} ({fmtTitle(selectedAdminOrder.paymentStatus)})</strong></div>
+                                <div><span className="profile-meta-label">Items</span><strong>{selectedAdminOrder.items?.length || 0}</strong></div>
+                                <div><span className="profile-meta-label">Total</span><strong>{fmtMoney(selectedAdminOrder.total)}</strong></div>
+                                <div><span className="profile-meta-label">Summary</span><strong>{adminOrderItemSummary}</strong></div>
+                              </div>
+                              <div className="admin-actions card-action-btn">
+                                {orderStatuses.map((status) => (
+                                  <button
+                                    key={status}
+                                    className={`admin-filter-btn ${selectedAdminOrder.orderStatus === status ? 'active' : ''}`}
+                                    type="button"
+                                    disabled={busyId === selectedAdminOrder._id}
+                                    onClick={() => runAdminUpdate(
+                                      `/api/orders/${selectedAdminOrder._id}/status`,
+                                      { id: selectedAdminOrder._id, body: { orderStatus: status } },
+                                      '/api/orders/admin'
+                                    )}
+                                  >
+                                    {busyId === selectedAdminOrder._id && selectedAdminOrder.orderStatus !== status
+                                      ? 'Updating...'
+                                      : fmtTitle(status)}
+                                  </button>
+                                ))}
+                              </div>
+                            </>
+                          ) : <div className="profile-empty-state"><p>Select an order.</p><span>Choose one to update its status.</span></div>}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-
-          {showAllOrders && (
-            <div className="panel" style={{ marginTop: '16px' }} id="all-orders">
-              <h3 style={{ marginTop: 0 }}>All Orders</h3>
-              {allOrdersStatus === 'loading' && <p className="loading">Loading orders...</p>}
-              {allOrdersStatus === 'error' && <div className="form-error">{allOrdersError}</div>}
-              {allOrdersStatus === 'success' && allOrders.length === 0 && <p>No orders yet.</p>}
-              {allOrdersStatus === 'success' && allOrders.length > 0 && (
-                <div className="dashboard-list">
-                  {allOrders.map((item) => (
-                    <div
-                      key={item._id}
-                      role="button"
-                      tabIndex={0}
-                      className="dashboard-item dashboard-item-clickable"
-                      onClick={() => setSelectedRecentOrderId(item._id)}
-                      onKeyDown={(event) =>
-                        onKeyboardActivate(event, () => setSelectedRecentOrderId(item._id))
-                      }
-                    >
-                      <span>
-                        <strong>{formatOrderNumber(item._id)}</strong><br />
-                        {item.items?.[0]?.name || 'Order Item'}
-                        {item.items?.length > 1 ? ` +${item.items.length - 1} more` : ''}
-                      </span>
-                      <span>{item.deliveryType}</span>
-                      <span>{item.orderStatus} / {item.paymentStatus}</span>
-                      <span>
-                        {formatCurrency(item.total)}<br />
-                        <Link
-                          className="btn btn-outline"
-                          to={`/orders/${item._id}`}
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          View Details
-                        </Link>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div style={{ marginTop: '16px' }} id="profile-actions">
-            <Link className="btn" to="/profile/edit">
-              Edit Profile
-            </Link>
-          </div>
-
-          {user?.role === 'admin' && (
-            <div className="panel" style={{ marginTop: '16px' }}>
-              <h3 style={{ marginTop: 0 }}>Admin Reservation Queue</h3>
-              <div className="admin-filter-row">
-                {[
-                  ['pending', 'Pending'],
-                  ['confirmed', 'Confirmed'],
-                  ['cancelled', 'Cancelled'],
-                  ['all', 'All'],
-                ].map(([key, label]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    className={`admin-filter-btn ${adminFilter === key ? 'active' : ''}`}
-                    onClick={() => setAdminFilter(key)}
-                  >
-                    {label} ({reservationCounts[key]})
-                  </button>
-                ))}
-              </div>
-              {adminActionError && <div className="form-error">{adminActionError}</div>}
-              {adminActionMessage && <div className="form-success">{adminActionMessage}</div>}
-              {filteredAdminReservations.length === 0 && <p>No reservations found.</p>}
-              {filteredAdminReservations.length > 0 && (
-                <div className="dashboard-list">
-                  {filteredAdminReservations.map((item) => (
-                    <div
-                      key={item._id}
-                      role="button"
-                      tabIndex={0}
-                      className={`dashboard-item dashboard-item-clickable ${selectedReservationId === item._id ? 'active' : ''}`}
-                      onClick={() => setSelectedReservationId(item._id)}
-                      onKeyDown={(event) =>
-                        onKeyboardActivate(event, () => setSelectedReservationId(item._id))
-                      }
-                    >
-                      <span>
-                        <strong>{formatReservationNumber(item._id)}</strong><br />
-                        {item.name} ({item.email})<br />
-                        {item.date} at {item.time}
-                      </span>
-                      <span>{item.guests} guest(s)</span>
-                      <span>{item.status}</span>
-                      <span className="admin-actions">
-                        <button
-                          type="button"
-                          className="btn btn-outline"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            handleAdminStatusUpdate(item._id, 'confirmed')
-                          }}
-                          disabled={item.status === 'confirmed' || updatingReservationId === item._id}
-                        >
-                          {updatingReservationId === item._id ? 'Updating...' : 'Confirm'}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-outline"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            handleAdminStatusUpdate(item._id, 'cancelled')
-                          }}
-                          disabled={item.status === 'cancelled' || updatingReservationId === item._id}
-                        >
-                          {updatingReservationId === item._id ? 'Updating...' : 'Cancel'}
-                        </button>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {selectedReservation && (
-                <div className="panel" style={{ marginTop: '14px' }}>
-                  <h4 style={{ marginTop: 0 }}>
-                    Reservation Details: {formatReservationNumber(selectedReservation._id)}
-                  </h4>
-                  <p>
-                    <strong>Guest:</strong> {selectedReservation.name} ({selectedReservation.email})
-                  </p>
-                  <p><strong>Phone:</strong> {selectedReservation.phone || '-'}</p>
-                  <p><strong>Date/Time:</strong> {selectedReservation.date} at {selectedReservation.time}</p>
-                  <p><strong>Guests:</strong> {selectedReservation.guests}</p>
-                  <p><strong>Status:</strong> {selectedReservation.status}</p>
-                  <p><strong>Requests:</strong> {selectedReservation.requests || '-'}</p>
-                  <p><strong>Created:</strong> {formatDate(selectedReservation.createdAt)}</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {user?.role === 'admin' && (
-            <div className="panel" style={{ marginTop: '16px' }}>
-              <h3 style={{ marginTop: 0 }}>Admin Order Queue</h3>
-              <div className="admin-filter-row">
-                {[
-                  ['pending', 'Pending'],
-                  ['confirmed', 'Confirmed'],
-                  ['preparing', 'Preparing'],
-                  ['out_for_delivery', 'Out for Delivery'],
-                  ['ready_for_pickup', 'Ready for Pickup'],
-                  ['completed', 'Completed'],
-                  ['cancelled', 'Cancelled'],
-                  ['all', 'All'],
-                ].map(([key, label]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    className={`admin-filter-btn ${adminOrderFilter === key ? 'active' : ''}`}
-                    onClick={() => setAdminOrderFilter(key)}
-                  >
-                    {label} ({orderCounts[key]})
-                  </button>
-                ))}
-              </div>
-              {filteredAdminOrders.length === 0 && <p>No orders found.</p>}
-              {filteredAdminOrders.length > 0 && (
-                <div className="dashboard-list">
-                  {filteredAdminOrders.map((item) => (
-                    <div
-                      key={item._id}
-                      role="button"
-                      tabIndex={0}
-                      className={`dashboard-item dashboard-item-clickable ${selectedOrderId === item._id ? 'active' : ''}`}
-                      onClick={() => setSelectedOrderId(item._id)}
-                      onKeyDown={(event) =>
-                        onKeyboardActivate(event, () => setSelectedOrderId(item._id))
-                      }
-                    >
-                      <span>
-                        <strong>{formatOrderNumber(item._id)}</strong><br />
-                        {item.customerName} ({item.email})
-                      </span>
-                      <span>{item.deliveryType}</span>
-                      <span>{item.orderStatus}</span>
-                      <span className="admin-actions">
-                        <Link
-                          className="btn btn-outline"
-                          to={`/orders/${item._id}`}
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          View
-                        </Link>
-                        <button
-                          type="button"
-                          className="btn btn-outline"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            handleAdminOrderStatusUpdate(item._id, 'preparing')
-                          }}
-                          disabled={updatingOrderId === item._id || item.orderStatus === 'preparing'}
-                        >
-                          {updatingOrderId === item._id ? 'Updating...' : 'Prepare'}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-outline"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            handleAdminOrderStatusUpdate(
-                              item._id,
-                              item.deliveryType === 'home_delivery'
-                                ? 'out_for_delivery'
-                                : 'ready_for_pickup'
-                            )
-                          }}
-                          disabled={
-                            updatingOrderId === item._id ||
-                            item.orderStatus === 'out_for_delivery' ||
-                            item.orderStatus === 'ready_for_pickup'
-                          }
-                        >
-                          {updatingOrderId === item._id ? 'Updating...' : 'Dispatch'}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-outline"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            handleAdminOrderStatusUpdate(item._id, 'completed')
-                          }}
-                          disabled={updatingOrderId === item._id || item.orderStatus === 'completed'}
-                        >
-                          {updatingOrderId === item._id ? 'Updating...' : 'Complete'}
-                        </button>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {selectedOrder && (
-                <div className="panel" style={{ marginTop: '14px' }}>
-                  <h4 style={{ marginTop: 0 }}>Order Details: {formatOrderNumber(selectedOrder._id)}</h4>
-                  <p>
-                    <strong>Customer:</strong> {selectedOrder.customerName} ({selectedOrder.email})
-                  </p>
-                  <p><strong>Phone:</strong> {selectedOrder.phone || '-'}</p>
-                  <p><strong>Delivery:</strong> {selectedOrder.deliveryType}</p>
-                  <p><strong>Payment:</strong> {selectedOrder.paymentMethod} ({selectedOrder.paymentStatus})</p>
-                  <p><strong>Status:</strong> {selectedOrder.orderStatus}</p>
-                  <p><strong>Total:</strong> {formatCurrency(selectedOrder.total)}</p>
-                  <p><strong>Items:</strong> {(selectedOrder.items || []).map((it) => `${it.name} x${it.quantity}`).join(', ') || '-'}</p>
-                  <p><strong>Created:</strong> {formatDate(selectedOrder.createdAt)}</p>
-                </div>
-              )}
-            </div>
-          )}
-
         </div>
       </div>
     </section>

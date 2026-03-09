@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useEffect, useState } from 'react'
 import { findUnitOption } from '../utils/servingUnits'
 
 const CartContext = createContext(null)
@@ -26,6 +27,24 @@ const buildLineItem = (menuItem, selectedUnitOption, quantity) => {
     servingOption: servingOption.value,
     servingLabel: servingOption.label,
     basePrice,
+    unitPrice,
+    quantity: safeQuantity,
+    lineTotal: unitPrice * safeQuantity,
+  }
+}
+
+const buildLineItemFromOrderItem = (item) => {
+  const safeQuantity = Math.max(1, Number(item.quantity) || 1)
+  const unitPrice = Number(item.unitPrice) || 0
+
+  return {
+    key: `${item.menuItem}:${item.servingOption}`,
+    menuItemId: item.menuItem,
+    name: item.name,
+    image: item.image || '',
+    servingOption: item.servingOption,
+    servingLabel: item.servingLabel || item.servingOption,
+    basePrice: unitPrice,
     unitPrice,
     quantity: safeQuantity,
     lineTotal: unitPrice * safeQuantity,
@@ -78,15 +97,44 @@ export function CartProvider({ children }) {
 
   const clearCart = () => setItems([])
 
+  const replaceCart = (nextItems = []) => {
+    setItems(
+      nextItems
+        .filter((item) => item?.menuItem || item?.menuItemId)
+        .map((item) =>
+          item.unitPrice !== undefined && item.lineTotal !== undefined
+            ? buildLineItemFromOrderItem({
+              ...item,
+              menuItem: item.menuItem || item.menuItemId,
+            })
+            : buildLineItem(
+              {
+                _id: item.menuItemId,
+                name: item.name,
+                image: item.image,
+                price: item.basePrice || item.unitPrice || 0,
+              },
+              {
+                value: item.servingOption,
+                label: item.servingLabel || item.servingOption,
+                multiplier: 1,
+              },
+              item.quantity
+            )
+        )
+    )
+  }
+
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
   const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0)
 
-  const value = useMemo(
-    () => ({ items, itemCount, subtotal, addItem, updateQuantity, removeItem, clearCart }),
-    [items, itemCount, subtotal]
+  return (
+    <CartContext.Provider
+      value={{ items, itemCount, subtotal, addItem, updateQuantity, removeItem, clearCart, replaceCart }}
+    >
+      {children}
+    </CartContext.Provider>
   )
-
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>
 }
 
 export const useCart = () => useContext(CartContext)
