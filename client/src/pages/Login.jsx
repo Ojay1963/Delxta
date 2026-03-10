@@ -21,7 +21,10 @@ function Login() {
     setLoading(true)
     try {
       await login(form)
-      navigate(location.state?.from?.pathname || '/profile', { replace: true })
+      const redirectTarget = location.state?.from
+        ? `${location.state.from.pathname || ''}${location.state.from.search || ''}`
+        : '/profile'
+      navigate(redirectTarget, { replace: true })
     } catch (err) {
       setError(err.message || 'Login failed. Check your credentials.')
       if (err.code === 'EMAIL_NOT_VERIFIED') {

@@ -1,21 +1,25 @@
+import { API_BASE_URL } from '../utils/api'
+
+const mealImage = (fileName) => `${API_BASE_URL}/meal-images/${encodeURIComponent(fileName)}`
+
 export const features = [
   {
     title: 'Exquisite Cuisine',
     description:
       'Masterfully crafted dishes blending local flavors with international techniques.',
-    icon: '🍽️',
+    icon: '\u{1F37D}\uFE0F',
   },
   {
     title: 'World Class Service',
     description:
       'Award-winning hospitality ensuring every moment is memorable and personalized.',
-    icon: '🫶',
+    icon: '\u{1F90D}',
   },
   {
     title: 'Elegant Ambiance',
     description:
       'A sophisticated atmosphere perfect for romantic dinners and celebrations.',
-    icon: '✨',
+    icon: '\u2728',
   },
 ]
 
@@ -24,25 +28,22 @@ export const chefSelections = [
     title: 'Classic Jollof Rice',
     description:
       'Smoky party jollof rice served with fried plantain and your choice of grilled chicken, beef, or fish.',
-    price: '₦8,500',
-    image:
-      'https://images.unsplash.com/photo-1546069901-eacef0df6022?auto=format&fit=crop&w=800&q=80',
+    price: 'NGN 8,500',
+    image: mealImage('CLASS-JOLLOF.jpg'),
   },
   {
     title: 'Ribeye Steak',
     description:
       'Premium ribeye steak cooked to your preference, served with creamy mashed potatoes and sauteed greens.',
-    price: '₦25,000',
-    image:
-      'https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=800&q=80',
+    price: 'NGN 25,000',
+    image: mealImage('ribeye_steak.png'),
   },
   {
     title: 'Pounded Yam & Egusi',
     description:
       'Soft pounded yam paired with rich Egusi soup garnished with stockfish and goat meat.',
-    price: '₦12,000',
-    image:
-      'https://images.unsplash.com/photo-1481931098730-318b6f776db0?auto=format&fit=crop&w=800&q=80',
+    price: 'NGN 12,000',
+    image: mealImage('POUNDED-YAM & EGUSI.jpg'),
   },
 ]
 

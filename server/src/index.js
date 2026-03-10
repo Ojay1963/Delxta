@@ -13,6 +13,7 @@ const paymentRoutes = require('./routes/paymentRoutes')
 const errorHandler = require('./middleware/error')
 const seedDatabase = require('./utils/seed')
 const ensureAdminUser = require('./utils/ensureAdminUser')
+const { getMealImageFilePath } = require('./utils/mealImageMap')
 
 dotenv.config({ path: path.resolve(__dirname, '..', '.env') })
 
@@ -38,6 +39,7 @@ app.use(
 app.use(express.json())
 app.use(morgan('dev'))
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')))
+app.use('/meal-images', express.static(getMealImageFilePath()))
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' })

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { apiRequest } from '../utils/api'
 import { useAuth } from '../context/AuthContext'
@@ -16,38 +16,37 @@ const initialState = {
 function Reservations() {
   const { token, user } = useAuth()
   const location = useLocation()
-  const [form, setForm] = useState(initialState)
+  const query = useMemo(() => new URLSearchParams(location.search), [location.search])
+  const [form, setForm] = useState(() => ({
+    ...initialState,
+    guests: query.get('guests') || initialState.guests,
+    date: query.get('date') || initialState.date,
+    time: query.get('time') || initialState.time,
+    requests: query.get('requests') || initialState.requests,
+  }))
   const [errors, setErrors] = useState({})
   const [status, setStatus] = useState('idle')
-  const query = useMemo(() => new URLSearchParams(location.search), [location.search])
+  const hydratedForm = useMemo(() => ({
+    ...form,
+    name: form.name || user?.name || '',
+    email: form.email || user?.email || '',
+    phone: form.phone || user?.phone || '',
+  }), [form, user])
 
-  useEffect(() => {
-    setForm((prev) => ({
-      ...prev,
-      name: user?.name || prev.name,
-      email: user?.email || prev.email,
-      phone: user?.phone || prev.phone,
-      guests: query.get('guests') || prev.guests,
-      date: query.get('date') || prev.date,
-      time: query.get('time') || prev.time,
-      requests: query.get('requests') || prev.requests,
-    }))
-  }, [query, user])
-
-  const validate = () => {
+  const validate = (values) => {
     const next = {}
-    if (!form.name.trim()) next.name = 'Name is required'
-    if (!form.email.includes('@')) next.email = 'Valid email required'
-    if (!form.phone.trim()) next.phone = 'Phone is required'
-    if (!/^\d{11}$/.test(form.phone.trim())) next.phone = 'Phone number must be exactly 11 digits'
-    if (!form.date) next.date = 'Select a date'
-    if (!form.time) next.time = 'Select a time'
+    if (!values.name.trim()) next.name = 'Name is required'
+    if (!values.email.includes('@')) next.email = 'Valid email required'
+    if (!values.phone.trim()) next.phone = 'Phone is required'
+    if (!/^\d{11}$/.test(values.phone.trim())) next.phone = 'Phone number must be exactly 11 digits'
+    if (!values.date) next.date = 'Select a date'
+    if (!values.time) next.time = 'Select a time'
     return next
   }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    const nextErrors = validate()
+    const nextErrors = validate(hydratedForm)
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) return
 
@@ -56,14 +55,12 @@ function Reservations() {
       await apiRequest('/api/reservations', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
-        body: JSON.stringify(form),
+        body: JSON.stringify(hydratedForm),
       })
       setStatus('success')
       setForm({
         ...initialState,
-        name: user?.name || '',
-        email: user?.email || '',
-        phone: user?.phone || '',
+        guests: query.get('guests') || initialState.guests,
       })
     } catch {
       setStatus('error')
@@ -99,7 +96,7 @@ function Reservations() {
               <label className="form-label">Name</label>
               <input
                 className="input"
-                value={form.name}
+                value={hydratedForm.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="John Doe"
               />
@@ -109,7 +106,7 @@ function Reservations() {
               <label className="form-label">Email</label>
               <input
                 className="input"
-                value={form.email}
+                value={hydratedForm.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 placeholder="john@example.com"
               />
@@ -119,7 +116,7 @@ function Reservations() {
               <label className="form-label">Phone</label>
               <input
                 className="input"
-                value={form.phone}
+                value={hydratedForm.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 placeholder="08012345678"
                 maxLength={11}

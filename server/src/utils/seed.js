@@ -1,5 +1,6 @@
 const MenuItem = require('../models/MenuItem')
 const Review = require('../models/Review')
+const { resolveMealImage } = require('./mealImageMap')
 
 const imagePool = [
   'https://images.unsplash.com/photo-1546069901-eacef0df6022?auto=format&fit=crop&w=800&q=80',
@@ -156,7 +157,7 @@ const makeCategoryItems = (names, category, basePrice, step, isFeaturedEvery = 0
     description: makeDescription(category, name),
     price: makePrice(basePrice, index, step),
     category,
-    image: imagePool[index % imagePool.length],
+    image: resolveMealImage(name, imagePool[index % imagePool.length]),
     isFeatured: isFeaturedEvery > 0 && index % isFeaturedEvery === 0,
   }))
 
