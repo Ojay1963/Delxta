@@ -1,4 +1,5 @@
 const path = require('path')
+const { optimizeImageUrl } = require('./imageDelivery')
 
 const mealImageMap = {
   'party jollof supreme': 'PARTY-JOLLOF.jpg',
@@ -59,9 +60,14 @@ const getMealImagePath = (mealName) => {
   return mappedFile ? `/meal-images/${encodeURIComponent(mappedFile)}` : null
 }
 
+const getMappedMealImageFileName = (mealName) => {
+  const normalizedName = normalizeMealName(mealName)
+  return mealImageMap[normalizedName] || null
+}
+
 const withAbsoluteAssetUrl = (assetPath, req) => {
   if (!assetPath || !req) return assetPath
-  if (/^https?:\/\//i.test(assetPath)) return assetPath
+  if (/^https?:\/\//i.test(assetPath)) return optimizeImageUrl(assetPath)
   return `${req.protocol}://${req.get('host')}${assetPath}`
 }
 
@@ -73,13 +79,14 @@ const resolveMealImage = (mealName, fallbackImage, req) => {
     return withAbsoluteAssetUrl(fallbackImage, req)
   }
 
-  return fallbackImage
+  return optimizeImageUrl(fallbackImage)
 }
 
 const getMealImageFilePath = (...parts) => path.join(__dirname, '..', 'meal-images', ...parts)
 
 module.exports = {
   getMealImageFilePath,
+  getMappedMealImageFileName,
   getMealImagePath,
   resolveMealImage,
 }

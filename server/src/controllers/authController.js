@@ -4,6 +4,8 @@ const User = require('../models/User')
 const Reservation = require('../models/Reservation')
 const Order = require('../models/Order')
 const { sendEmail } = require('../utils/email')
+const { deleteImage, uploadImageBuffer } = require('../utils/cloudinary')
+const { optimizeImageUrl } = require('../utils/imageDelivery')
 
 const logAuthEvent = (event, details = {}) => {
   console.log(`[auth] ${event}`, details)
@@ -338,20 +340,33 @@ const updateAvatar = async (req, res, next) => {
       return res.status(400).json({ message: 'Avatar image is required.' })
     }
 
-    const avatarUrl = `/uploads/${req.file.filename}`
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      { avatarUrl },
-      { new: true, runValidators: true }
-    ).select('-password')
-
-    if (!user) {
+    const existingUser = await User.findById(req.user.id).select('-password')
+    if (!existingUser) {
       return res.status(404).json({ message: 'User not found.' })
     }
 
+    const uploadResult = await uploadImageBuffer(req.file.buffer, {
+      folder: process.env.CLOUDINARY_AVATAR_FOLDER || 'delxta/avatars',
+      resource_type: 'image',
+      public_id: `avatar-${req.user.id}-${Date.now()}`,
+      overwrite: true,
+      transformation: [
+        { width: 512, height: 512, crop: 'fill', gravity: 'face' },
+        { quality: 'auto', fetch_format: 'auto' },
+      ],
+    })
+
+    if (existingUser.avatarPublicId) {
+      await deleteImage(existingUser.avatarPublicId)
+    }
+
+    existingUser.avatarUrl = optimizeImageUrl(uploadResult.secure_url)
+    existingUser.avatarPublicId = uploadResult.public_id
+    await existingUser.save()
+
     return res.json({
       message: 'Profile photo updated.',
-      user: serializeUser(user),
+      user: serializeUser(existingUser),
     })
   } catch (error) {
     return next(error)
