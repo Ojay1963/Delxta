@@ -31,6 +31,7 @@ export async function apiRequest(path, options = {}) {
   const { headers: customHeaders = {}, timeoutMs = 65000, ...restOptions } = options
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+  const isFormDataBody = typeof FormData !== 'undefined' && restOptions.body instanceof FormData
 
   let response
 
@@ -39,7 +40,7 @@ export async function apiRequest(path, options = {}) {
       ...restOptions,
       signal: controller.signal,
       headers: {
-        'Content-Type': 'application/json',
+        ...(isFormDataBody ? {} : { 'Content-Type': 'application/json' }),
         ...customHeaders,
       },
     })
