@@ -18,6 +18,7 @@ const userSchema = new mongoose.Schema(
     deliveryNotes: { type: String, trim: true, default: '' },
     bio: { type: String, trim: true, default: '' },
     avatarUrl: { type: String, trim: true, default: '' },
+    avatarPublicId: { type: String, trim: true, default: '' },
     preferredContactMethod: {
       type: String,
       enum: ['email', 'phone', 'whatsapp'],

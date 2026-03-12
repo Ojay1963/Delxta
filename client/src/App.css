@@ -1836,6 +1836,23 @@
   margin-top: 22px;
 }
 
+.menu-admin-form-stack {
+  gap: 18px;
+  margin-top: 0;
+}
+
+.menu-admin-preview {
+  width: 100%;
+  max-height: 280px;
+  object-fit: cover;
+  border-radius: 18px;
+  border: 1px solid var(--border-500);
+}
+
+.menu-admin-toggle-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .admin-actions {
   display: flex;
   flex-wrap: wrap;
@@ -2086,6 +2103,10 @@
   }
 
   .profile-section-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .menu-admin-toggle-grid {
     grid-template-columns: 1fr;
   }
 

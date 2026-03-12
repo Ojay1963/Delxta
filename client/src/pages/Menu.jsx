@@ -168,7 +168,14 @@ function Menu() {
                   whileInView="visible"
                   viewport={{ once: true }}
                 >
-                  <img src={item.image} alt={item.name} />
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    loading="lazy"
+                    decoding="async"
+                    fetchPriority="low"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  />
                   <div className="image-card-body">
                     <div className="menu-card-header">
                       <h4>{item.name}</h4>

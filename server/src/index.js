@@ -41,8 +41,21 @@ app.use(
 )
 app.use(express.json())
 app.use(morgan('dev'))
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')))
-app.use('/meal-images', express.static(getMealImageFilePath()))
+app.use(
+  '/uploads',
+  express.static(path.join(__dirname, '..', 'uploads'), {
+    maxAge: '7d',
+    etag: true,
+  })
+)
+app.use(
+  '/meal-images',
+  express.static(getMealImageFilePath(), {
+    maxAge: '30d',
+    immutable: true,
+    etag: true,
+  })
+)
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' })

@@ -45,6 +45,24 @@ const getTasks = (user) => [
 
 const reservationStatuses = ['pending', 'confirmed', 'cancelled']
 const orderStatuses = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'ready_for_pickup', 'completed', 'cancelled']
+const menuCategories = ['Nigerian Delicacies', 'Intercontinental', 'Starters & Appetizers', 'Signature Drinks']
+const initialMenuForm = {
+  name: '',
+  description: '',
+  price: '',
+  category: menuCategories[0],
+  isFeatured: false,
+  isAvailable: true,
+}
+
+const buildMenuForm = (item) => ({
+  name: item?.name || '',
+  description: item?.description || '',
+  price: item?.price || '',
+  category: item?.category || menuCategories[0],
+  isFeatured: Boolean(item?.isFeatured),
+  isAvailable: item?.isAvailable !== false,
+})
 
 function Profile() {
   const { user, token, logout } = useAuth()
@@ -67,6 +85,15 @@ function Profile() {
   const [adminOrderFilter, setAdminOrderFilter] = useState('pending')
   const [selectedAdminReservationId, setSelectedAdminReservationId] = useState('')
   const [selectedAdminOrderId, setSelectedAdminOrderId] = useState('')
+  const [menuItems, setMenuItems] = useState([])
+  const [menuStatus, setMenuStatus] = useState('idle')
+  const [menuError, setMenuError] = useState('')
+  const [menuFilterCategory, setMenuFilterCategory] = useState('all')
+  const [selectedAdminMenuId, setSelectedAdminMenuId] = useState('')
+  const [menuFormMode, setMenuFormMode] = useState('create')
+  const [menuForm, setMenuForm] = useState(initialMenuForm)
+  const [menuImageFile, setMenuImageFile] = useState(null)
+  const [menuImagePreview, setMenuImagePreview] = useState('')
   const [adminMessage, setAdminMessage] = useState('')
   const [adminError, setAdminError] = useState('')
   const [busyId, setBusyId] = useState('')
@@ -115,14 +142,52 @@ function Profile() {
   }, [activeTab, ordersStatus, token])
 
   useEffect(() => {
-    if (!token || user?.role !== 'admin') return
-    apiRequest('/api/reservations/admin', { headers: { Authorization: `Bearer ${token}` } })
-      .then((data) => setAdminReservations(data.reservations || []))
-      .catch(() => {})
-    apiRequest('/api/orders/admin', { headers: { Authorization: `Bearer ${token}` } })
-      .then((data) => setAdminOrders(data.orders || []))
-      .catch(() => {})
-  }, [token, user?.role])
+    if (!token || user?.role !== 'admin' || activeTab !== 'admin') return
+
+    let isMounted = true
+
+    const refreshAdminData = async () => {
+      try {
+        const [reservationsData, ordersData, menuData] = await Promise.all([
+          apiRequest('/api/reservations/admin', { headers: { Authorization: `Bearer ${token}` } }),
+          apiRequest('/api/orders/admin', { headers: { Authorization: `Bearer ${token}` } }),
+          apiRequest('/api/menu'),
+        ])
+
+        if (!isMounted) return
+
+        setAdminReservations(reservationsData.reservations || [])
+        setAdminOrders(ordersData.orders || [])
+        setMenuItems(menuData.items || [])
+        setMenuStatus('success')
+        setMenuError('')
+      } catch (error) {
+        if (!isMounted) return
+        setMenuError(error.message || 'Unable to load admin data.')
+        setMenuStatus('error')
+      }
+    }
+
+    setMenuStatus('loading')
+    refreshAdminData()
+    const refreshInterval = window.setInterval(refreshAdminData, 15000)
+
+    return () => {
+      isMounted = false
+      window.clearInterval(refreshInterval)
+    }
+  }, [activeTab, token, user?.role])
+
+  useEffect(() => {
+    if (!menuImageFile) {
+      setMenuImagePreview('')
+      return undefined
+    }
+
+    const previewUrl = URL.createObjectURL(menuImageFile)
+    setMenuImagePreview(previewUrl)
+    return () => URL.revokeObjectURL(previewUrl)
+  }, [menuImageFile])
 
   const reservations = useMemo(() => {
     if (reservationList.length) return reservationList
@@ -148,6 +213,11 @@ function Profile() {
     if (!selectedAdminOrderId && adminOrders[0]?._id) setSelectedAdminOrderId(adminOrders[0]._id)
   }, [adminOrders, selectedAdminOrderId])
 
+  useEffect(() => {
+    if (menuFormMode === 'create') return
+    if (!selectedAdminMenuId && menuItems[0]?._id) setSelectedAdminMenuId(menuItems[0]._id)
+  }, [menuItems, menuFormMode, selectedAdminMenuId])
+
   const initials = (user?.name || 'U')
     .split(' ')
     .filter(Boolean)
@@ -170,8 +240,10 @@ function Profile() {
   const selectedOrder = allOrders.find((item) => item._id === selectedOrderId) || null
   const filteredAdminReservations = adminReservationFilter === 'all' ? adminReservations : adminReservations.filter((item) => item.status === adminReservationFilter)
   const filteredAdminOrders = adminOrderFilter === 'all' ? adminOrders : adminOrders.filter((item) => item.orderStatus === adminOrderFilter)
+  const filteredMenuItems = menuFilterCategory === 'all' ? menuItems : menuItems.filter((item) => item.category === menuFilterCategory)
   const selectedAdminReservation = adminReservations.find((item) => item._id === selectedAdminReservationId) || null
   const selectedAdminOrder = adminOrders.find((item) => item._id === selectedAdminOrderId) || null
+  const selectedAdminMenu = menuItems.find((item) => item._id === selectedAdminMenuId) || null
 
   const reservationCounts = adminReservations.reduce((acc, item) => {
     acc.all += 1
@@ -184,6 +256,12 @@ function Profile() {
     acc[item.orderStatus] = (acc[item.orderStatus] || 0) + 1
     return acc
   }, { all: 0, pending: 0, confirmed: 0, preparing: 0, out_for_delivery: 0, ready_for_pickup: 0, completed: 0, cancelled: 0 })
+
+  const menuCounts = menuItems.reduce((acc, item) => {
+    acc.all += 1
+    acc[item.category] = (acc[item.category] || 0) + 1
+    return acc
+  }, { all: 0 })
 
   const runAdminUpdate = async (path, payload, reload) => {
     try {
@@ -206,6 +284,128 @@ function Profile() {
     }
   }
 
+  const resetMenuForm = () => {
+    setMenuFormMode('create')
+    setSelectedAdminMenuId('')
+    setMenuForm(initialMenuForm)
+    setMenuImageFile(null)
+    setAdminMessage('')
+    setAdminError('')
+  }
+
+  const loadMenuItems = async () => {
+    const data = await apiRequest('/api/menu')
+    setMenuItems(data.items || [])
+    setMenuStatus('success')
+    return data.items || []
+  }
+
+  const handleSelectAdminMenu = (item) => {
+    setMenuFormMode('edit')
+    setSelectedAdminMenuId(item._id)
+    setMenuForm(buildMenuForm(item))
+    setMenuImageFile(null)
+    setAdminMessage('')
+    setAdminError('')
+  }
+
+  const handleMenuFieldChange = (field, value) => {
+    setMenuForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleMenuImageChange = (event) => {
+    const file = event.target.files?.[0] || null
+    setMenuImageFile(file)
+    event.target.value = ''
+  }
+
+  const submitMenuForm = async (event) => {
+    event.preventDefault()
+    if (!token) return
+
+    if (!menuForm.name.trim() || !menuForm.description.trim() || !menuForm.price.trim() || !menuForm.category.trim()) {
+      setAdminError('Name, description, price, and category are required.')
+      setAdminMessage('')
+      return
+    }
+
+    if (menuFormMode === 'create' && !menuImageFile) {
+      setAdminError('Choose a meal image before creating a menu item.')
+      setAdminMessage('')
+      return
+    }
+
+    try {
+      const targetId = selectedAdminMenuId || 'menu-create'
+      setBusyId(targetId)
+      setAdminMessage('')
+      setAdminError('')
+
+      const formData = new FormData()
+      formData.append('name', menuForm.name.trim())
+      formData.append('description', menuForm.description.trim())
+      formData.append('price', menuForm.price.trim())
+      formData.append('category', menuForm.category)
+      formData.append('isFeatured', String(menuForm.isFeatured))
+      formData.append('isAvailable', String(menuForm.isAvailable))
+      if (menuImageFile) {
+        formData.append('image', menuImageFile)
+      }
+
+      const isEdit = menuFormMode === 'edit' && selectedAdminMenuId
+      const data = await apiRequest(isEdit ? `/api/menu/${selectedAdminMenuId}` : '/api/menu', {
+        method: isEdit ? 'PATCH' : 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+
+      const nextItems = await loadMenuItems()
+      setAdminMessage(data.message || (isEdit ? 'Menu item updated successfully.' : 'Menu item created successfully.'))
+      setMenuImageFile(null)
+
+      if (isEdit) {
+        const refreshedItem = nextItems.find((item) => item._id === selectedAdminMenuId)
+        if (refreshedItem) setMenuForm(buildMenuForm(refreshedItem))
+      } else {
+        const createdItemId = data.item?._id
+        const createdItem = nextItems.find((item) => item._id === createdItemId) || data.item
+        if (createdItem?._id) {
+          setMenuFormMode('edit')
+          setSelectedAdminMenuId(createdItem._id)
+          setMenuForm(buildMenuForm(createdItem))
+        } else {
+          resetMenuForm()
+        }
+      }
+    } catch (error) {
+      setAdminError(error.message || 'Unable to save menu item.')
+    } finally {
+      setBusyId('')
+    }
+  }
+
+  const handleDeleteMenuItem = async () => {
+    if (!selectedAdminMenuId || !token || !selectedAdminMenu) return
+    if (!window.confirm(`Delete "${selectedAdminMenu.name}" from the menu?`)) return
+
+    try {
+      setBusyId(selectedAdminMenuId)
+      setAdminMessage('')
+      setAdminError('')
+      const data = await apiRequest(`/api/menu/${selectedAdminMenuId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      await loadMenuItems()
+      resetMenuForm()
+      setAdminMessage(data.message || 'Menu item deleted successfully.')
+    } catch (error) {
+      setAdminError(error.message || 'Unable to delete menu item.')
+    } finally {
+      setBusyId('')
+    }
+  }
+
   const stats = [
     ['Reservations', dashboard.stats.totalReservations || 0, `${dashboard.stats.pendingReservations || 0} pending`],
     ['Orders', dashboard.stats.totalOrders || 0, `${dashboard.stats.activeOrders || 0} active`],
@@ -220,6 +420,7 @@ function Profile() {
   ]
   const orderItemSummary = selectedOrder?.items?.map((item) => `${item.quantity}x ${item.name}`).join(', ') || 'No order items recorded.'
   const adminOrderItemSummary = selectedAdminOrder?.items?.map((item) => `${item.quantity}x ${item.name}`).join(', ') || 'No order items recorded.'
+  const menuPreviewSrc = menuImagePreview || selectedAdminMenu?.image || ''
   const canCancelReservation = ['pending', 'confirmed'].includes(selectedReservation?.status)
   const canCancelOrder = ['pending', 'confirmed'].includes(selectedOrder?.orderStatus)
   const premiumMetrics = [
@@ -586,6 +787,138 @@ function Profile() {
                       {adminError && <div className="form-error">{adminError}</div>}
                     </div>
                   )}
+
+                  <div className="panel profile-activity-panel">
+                    <div className="profile-list-head">
+                      <div>
+                        <p className="profile-eyebrow">Menu Admin</p>
+                        <h4>Upload and maintain menu items</h4>
+                      </div>
+                      <button className="btn btn-outline" type="button" onClick={resetMenuForm}>
+                        Add New Item
+                      </button>
+                    </div>
+
+                    <div className="admin-filter-row">
+                      {['all', ...menuCategories].map((category) => (
+                        <button
+                          key={category}
+                          className={`admin-filter-btn ${menuFilterCategory === category ? 'active' : ''}`}
+                          type="button"
+                          onClick={() => setMenuFilterCategory(category)}
+                        >
+                          {fmtTitle(category)} ({menuCounts[category] || 0})
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="profile-split-view">
+                      <div className="profile-activity-list">
+                        {menuError && menuStatus === 'error' && <div className="form-error">{menuError}</div>}
+                        {menuStatus === 'loading' ? <p className="loading">Loading menu items...</p> : filteredMenuItems.length ? filteredMenuItems.map((item) => (
+                          <button
+                            key={item._id}
+                            className={`profile-list-card ${selectedAdminMenuId === item._id ? 'active' : ''}`}
+                            type="button"
+                            onClick={() => handleSelectAdminMenu(item)}
+                          >
+                            <div className="profile-list-card-top">
+                              <strong>{item.name}</strong>
+                              <span className={`status-badge ${item.isAvailable === false ? 'danger' : 'success'}`}>
+                                {item.isAvailable === false ? 'Unavailable' : 'Live'}
+                              </span>
+                            </div>
+                            <p>{item.category}</p>
+                            <span>{item.price} {item.isFeatured ? '| Featured' : ''}</span>
+                          </button>
+                        )) : <div className="profile-empty-state"><p>No menu items found.</p><span>Use the form to create a new menu item for this category.</span></div>}
+                      </div>
+
+                      <div className="panel profile-detail-panel">
+                        <form className="profile-detail-stack menu-admin-form-stack" onSubmit={submitMenuForm}>
+                          <div className="profile-section-head">
+                            <div>
+                              <p className="profile-eyebrow">Menu Item Editor</p>
+                              <h4>{menuFormMode === 'edit' ? 'Update menu item' : 'Create menu item'}</h4>
+                            </div>
+                            <span className={`status-badge ${menuForm.isAvailable ? 'success' : 'danger'}`}>
+                              {menuForm.isAvailable ? 'Available' : 'Unavailable'}
+                            </span>
+                          </div>
+
+                          {menuPreviewSrc ? (
+                            <img className="menu-admin-preview" src={menuPreviewSrc} alt={menuForm.name || 'Menu preview'} />
+                          ) : (
+                            <div className="profile-empty-state">
+                              <p>No image selected.</p>
+                              <span>Choose an image to preview it here before saving.</span>
+                            </div>
+                          )}
+
+                          <div className="form-grid">
+                            <div>
+                              <label className="form-label">Name</label>
+                              <input className="input" value={menuForm.name} onChange={(e) => handleMenuFieldChange('name', e.target.value)} placeholder="Smoky Jollof Rice" />
+                            </div>
+                            <div>
+                              <label className="form-label">Price</label>
+                              <input className="input" value={menuForm.price} onChange={(e) => handleMenuFieldChange('price', e.target.value)} placeholder="NGN 8,500" />
+                            </div>
+                            <div>
+                              <label className="form-label">Category</label>
+                              <select className="select" value={menuForm.category} onChange={(e) => handleMenuFieldChange('category', e.target.value)}>
+                                {menuCategories.map((category) => (
+                                  <option key={category} value={category}>{category}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="form-label">Meal Image</label>
+                              <input className="input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleMenuImageChange} />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="form-label">Description</label>
+                            <textarea className="textarea" value={menuForm.description} onChange={(e) => handleMenuFieldChange('description', e.target.value)} placeholder="Describe the dish, ingredients, and serving style." rows="4" />
+                          </div>
+
+                          <div className="profile-toggle-grid menu-admin-toggle-grid">
+                            <label className="profile-toggle-card">
+                              <input type="checkbox" checked={menuForm.isFeatured} onChange={(e) => handleMenuFieldChange('isFeatured', e.target.checked)} />
+                              <div>
+                                <strong>Featured item</strong>
+                                <span>Highlight this dish in curated or promotional sections.</span>
+                              </div>
+                            </label>
+                            <label className="profile-toggle-card">
+                              <input type="checkbox" checked={menuForm.isAvailable} onChange={(e) => handleMenuFieldChange('isAvailable', e.target.checked)} />
+                              <div>
+                                <strong>Available to order</strong>
+                                <span>Turn this off to keep the item listed but unavailable for checkout.</span>
+                              </div>
+                            </label>
+                          </div>
+
+                          <div className="profile-edit-actions">
+                            <button className="btn" type="submit" disabled={busyId === (selectedAdminMenuId || 'menu-create')}>
+                              {busyId === (selectedAdminMenuId || 'menu-create')
+                                ? (menuFormMode === 'edit' ? 'Saving...' : 'Creating...')
+                                : (menuFormMode === 'edit' ? 'Save Changes' : 'Create Item')}
+                            </button>
+                            {menuFormMode === 'edit' && (
+                              <button className="btn btn-muted" type="button" onClick={handleDeleteMenuItem} disabled={busyId === selectedAdminMenuId}>
+                                {busyId === selectedAdminMenuId ? 'Working...' : 'Delete Item'}
+                              </button>
+                            )}
+                            <button className="btn btn-outline" type="button" onClick={resetMenuForm}>
+                              Reset
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
 
                   <div className="profile-content-grid">
                     <div className="panel profile-activity-panel">

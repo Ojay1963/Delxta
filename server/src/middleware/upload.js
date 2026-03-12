@@ -1,42 +1,28 @@
-const fs = require('fs')
-const path = require('path')
 const multer = require('multer')
 
-const uploadDir = path.join(__dirname, '..', '..', 'uploads')
-
-const ensureUploadDir = () => {
-  if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true })
-  }
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    ensureUploadDir()
-    cb(null, uploadDir)
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname || '').toLowerCase()
-    const safeExt = ext || '.jpg'
-    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`
-    cb(null, `avatar-${unique}${safeExt}`)
-  },
-})
+const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 const fileFilter = (req, file, cb) => {
-  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-  if (!allowed.includes(file.mimetype)) {
+  if (!IMAGE_MIME_TYPES.includes(file.mimetype)) {
     const error = new Error('Only JPG, PNG, WEBP, or GIF images are allowed.')
     error.status = 400
     return cb(error)
   }
+
   return cb(null, true)
 }
 
-const uploadAvatar = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: 2 * 1024 * 1024 },
-}).single('avatar')
+const createSingleImageUpload = (fieldName, maxFileSizeMb = 5) =>
+  multer({
+    storage: multer.memoryStorage(),
+    fileFilter,
+    limits: { fileSize: maxFileSizeMb * 1024 * 1024 },
+  }).single(fieldName)
 
-module.exports = { uploadAvatar }
+const uploadAvatar = createSingleImageUpload('avatar', 2)
+const uploadMenuImage = createSingleImageUpload('image', 8)
+
+module.exports = {
+  uploadAvatar,
+  uploadMenuImage,
+}
