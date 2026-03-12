@@ -142,28 +142,41 @@ function Profile() {
   }, [activeTab, ordersStatus, token])
 
   useEffect(() => {
-    if (!token || user?.role !== 'admin') return
-    apiRequest('/api/reservations/admin', { headers: { Authorization: `Bearer ${token}` } })
-      .then((data) => setAdminReservations(data.reservations || []))
-      .catch(() => {})
-    apiRequest('/api/orders/admin', { headers: { Authorization: `Bearer ${token}` } })
-      .then((data) => setAdminOrders(data.orders || []))
-      .catch(() => {})
-  }, [token, user?.role])
+    if (!token || user?.role !== 'admin' || activeTab !== 'admin') return
 
-  useEffect(() => {
-    if (!token || user?.role !== 'admin') return
-    setMenuStatus('loading')
-    apiRequest('/api/menu')
-      .then((data) => {
-        setMenuItems(data.items || [])
+    let isMounted = true
+
+    const refreshAdminData = async () => {
+      try {
+        const [reservationsData, ordersData, menuData] = await Promise.all([
+          apiRequest('/api/reservations/admin', { headers: { Authorization: `Bearer ${token}` } }),
+          apiRequest('/api/orders/admin', { headers: { Authorization: `Bearer ${token}` } }),
+          apiRequest('/api/menu'),
+        ])
+
+        if (!isMounted) return
+
+        setAdminReservations(reservationsData.reservations || [])
+        setAdminOrders(ordersData.orders || [])
+        setMenuItems(menuData.items || [])
         setMenuStatus('success')
-      })
-      .catch((error) => {
-        setMenuError(error.message || 'Unable to load menu items.')
+        setMenuError('')
+      } catch (error) {
+        if (!isMounted) return
+        setMenuError(error.message || 'Unable to load admin data.')
         setMenuStatus('error')
-      })
-  }, [token, user?.role])
+      }
+    }
+
+    setMenuStatus('loading')
+    refreshAdminData()
+    const refreshInterval = window.setInterval(refreshAdminData, 15000)
+
+    return () => {
+      isMounted = false
+      window.clearInterval(refreshInterval)
+    }
+  }, [activeTab, token, user?.role])
 
   useEffect(() => {
     if (!menuImageFile) {
