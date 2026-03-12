@@ -15,7 +15,10 @@ const seedDatabase = require('./utils/seed')
 const ensureAdminUser = require('./utils/ensureAdminUser')
 const { getMealImageFilePath } = require('./utils/mealImageMap')
 
-dotenv.config({ path: path.resolve(__dirname, '..', '.env') })
+dotenv.config({
+  path: path.resolve(__dirname, '..', '.env'),
+  override: true,
+})
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -103,5 +106,15 @@ mongoose
   })
   .catch((error) => {
     console.error('MongoDB connection failed:', error.message)
+    if (mongoUri.startsWith('mongodb+srv://') && error.message.includes('querySrv')) {
+      console.error(
+        'SRV DNS lookup failed. Use a non-SRV Atlas URI or switch this machine DNS to a resolver that supports SRV records.'
+      )
+    }
+    if (error.message.includes('ECONNREFUSED') || error.message.includes('ETIMEDOUT')) {
+      console.error(
+        'Atlas is still unreachable from this machine. If the URI is correct, add your current public IP to the Atlas Network Access list and confirm outbound port 27017 is not blocked.'
+      )
+    }
     process.exit(1)
   })
