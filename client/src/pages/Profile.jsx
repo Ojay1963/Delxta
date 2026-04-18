@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { FiActivity, FiClock, FiUser } from 'react-icons/fi'
 import { useAuth } from '../context/AuthContext'
 import { apiRequest, API_BASE_URL } from '../utils/api'
 import { useCart } from '../context/CartContext'
@@ -599,6 +600,30 @@ function Profile() {
               </div>
             </div>
 
+            <div className="profile-mobile-summary" aria-label="Profile app summary">
+              <div className="profile-mobile-summary-card">
+                <FiUser aria-hidden="true" />
+                <div>
+                  <span className="profile-meta-label">Profile</span>
+                  <strong>{completion}% complete</strong>
+                </div>
+              </div>
+              <div className="profile-mobile-summary-card">
+                <FiClock aria-hidden="true" />
+                <div>
+                  <span className="profile-meta-label">Pending</span>
+                  <strong>{dashboard.stats.pendingReservations || 0} reservations</strong>
+                </div>
+              </div>
+              <div className="profile-mobile-summary-card">
+                <FiActivity aria-hidden="true" />
+                <div>
+                  <span className="profile-meta-label">Orders</span>
+                  <strong>{dashboard.stats.activeOrders || 0} active</strong>
+                </div>
+              </div>
+            </div>
+
             <div className="profile-stats-grid">
               {stats.map(([label, value, detail]) => (
                 <div className="panel profile-stat-card" key={label}>
@@ -625,7 +650,7 @@ function Profile() {
                   <p className="profile-eyebrow">Activity</p>
                   <h3>Profile details, orders, and reservations</h3>
                 </div>
-                <div className="profile-tabs">
+                <div className="profile-tabs profile-tabs-sticky">
                   <button className={`profile-tab ${activeTab === 'overview' ? 'active' : ''}`} type="button" onClick={() => setActiveTab('overview')}>Overview</button>
                   <button className={`profile-tab ${activeTab === 'reservations' ? 'active' : ''}`} type="button" onClick={() => setActiveTab('reservations')}>Reservations</button>
                   <button className={`profile-tab ${activeTab === 'orders' ? 'active' : ''}`} type="button" onClick={() => setActiveTab('orders')}>Orders</button>

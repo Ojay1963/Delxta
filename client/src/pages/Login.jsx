@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { FiLock, FiMail, FiUser } from 'react-icons/fi'
 import { useAuth } from '../context/AuthContext'
 
 function Login() {
@@ -42,8 +43,31 @@ function Login() {
 
   return (
     <section className="section">
-      <div className="container" style={{ maxWidth: '520px' }}>
-        <form className="form-card" onSubmit={handleSubmit}>
+      <div className="container auth-page-shell" style={{ maxWidth: '520px' }}>
+        <div className="auth-mobile-summary" aria-label="Login overview">
+          <div className="auth-mobile-card">
+            <FiUser aria-hidden="true" />
+            <div>
+              <span className="profile-meta-label">Access</span>
+              <strong>Return to your Delxta account</strong>
+            </div>
+          </div>
+          <div className="auth-mobile-card">
+            <FiMail aria-hidden="true" />
+            <div>
+              <span className="profile-meta-label">Email</span>
+              <strong>Use your registered email</strong>
+            </div>
+          </div>
+          <div className="auth-mobile-card">
+            <FiLock aria-hidden="true" />
+            <div>
+              <span className="profile-meta-label">Security</span>
+              <strong>Password-protected sign in</strong>
+            </div>
+          </div>
+        </div>
+        <form className="form-card auth-form-card" onSubmit={handleSubmit}>
           <h3 style={{ marginTop: 0 }}>Welcome Back</h3>
           <label className="form-label">Email</label>
           <input
@@ -107,9 +131,15 @@ function Login() {
             </button>
           </div>
           {error && <div className="form-error">{error}</div>}
-          <button className="btn" type="submit" disabled={loading} style={{ marginTop: '16px' }}>
-            {loading ? 'Signing in...' : 'Login'}
-          </button>
+          <div className="auth-submit-row">
+            <div className="auth-submit-copy">
+              <span className="profile-meta-label">Sign in flow</span>
+              <strong>{loading ? 'Checking your account' : 'Continue to your dashboard'}</strong>
+            </div>
+            <button className="btn" type="submit" disabled={loading} style={{ marginTop: '16px' }}>
+              {loading ? 'Signing in...' : 'Login'}
+            </button>
+          </div>
           <p style={{ marginTop: '16px', color: 'var(--text-400)' }}>
             No account? <Link to="/register">Create one</Link>
           </p>

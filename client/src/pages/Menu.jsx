@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
+import { FiChevronDown, FiGrid, FiShoppingBag, FiTag } from 'react-icons/fi'
 import LoadingState from '../components/LoadingState'
 import { menuCategories } from '../data/content'
 import { useCart } from '../context/CartContext'
@@ -29,6 +30,7 @@ function Menu() {
     items: [],
     error: '',
   })
+  const [expandedItemId, setExpandedItemId] = useState('')
   const [configByItemId, setConfigByItemId] = useState({})
   const [addedMessage, setAddedMessage] = useState('')
   const { addItem, itemCount } = useCart()
@@ -67,6 +69,10 @@ function Menu() {
     }
   }, [category])
 
+  useEffect(() => {
+    setExpandedItemId('')
+  }, [category])
+
   const configFor = (item) => {
     const existing = configByItemId[item._id]
     if (existing) return existing
@@ -97,6 +103,10 @@ function Menu() {
     window.setTimeout(() => setAddedMessage(''), 2000)
   }
 
+  const toggleExpandedItem = (itemId) => {
+    setExpandedItemId((current) => (current === itemId ? '' : itemId))
+  }
+
   return (
     <section className="section">
       <div className="container menu-page">
@@ -124,8 +134,52 @@ function Menu() {
           </div>
         </div>
 
+        <div className="menu-mobile-summary" aria-label="Menu overview">
+          <div className="menu-mobile-summary-card menu-mobile-summary-card-category">
+            <div className="menu-mobile-summary-icon">
+              <FiTag aria-hidden="true" />
+            </div>
+            <div className="menu-mobile-summary-copy">
+              <span className="profile-meta-label">Category</span>
+              <label className="sr-only" htmlFor="mobile-menu-category">
+                Choose menu category
+              </label>
+              <select
+                id="mobile-menu-category"
+                className="select menu-mobile-category-select"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+              >
+                {menuCategories.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="menu-mobile-summary-card">
+            <div className="menu-mobile-summary-icon">
+              <FiGrid aria-hidden="true" />
+            </div>
+            <div className="menu-mobile-summary-copy">
+              <span className="profile-meta-label">Live items</span>
+              <strong>{availableCount} available</strong>
+            </div>
+          </div>
+          <div className="menu-mobile-summary-card">
+            <div className="menu-mobile-summary-icon">
+              <FiShoppingBag aria-hidden="true" />
+            </div>
+            <div className="menu-mobile-summary-copy">
+              <span className="profile-meta-label">Basket</span>
+              <strong>{itemCount} item(s)</strong>
+            </div>
+          </div>
+        </div>
+
         {itemCount > 0 && (
-          <div className="menu-actions-row">
+          <div className="menu-actions-row menu-inline-checkout">
             <div className="pill">Items in order: {itemCount}</div>
             <Link className="btn" to="/order">
               View Order & Pay
@@ -133,19 +187,6 @@ function Menu() {
           </div>
         )}
         {addedMessage && <div className="form-success">{addedMessage}</div>}
-
-        <div className="menu-tabs">
-          {menuCategories.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              className={`tab ${category === tab ? 'active' : ''}`}
-              onClick={() => setCategory(tab)}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
 
         {status === 'loading' && <LoadingState message="Loading menu..." />}
         {status === 'error' && <div className="loading">{error || 'Failed to load menu.'}</div>}
@@ -162,7 +203,7 @@ function Menu() {
               return (
                 <motion.div
                   key={item._id}
-                  className="image-card menu-item-card"
+                  className={`image-card menu-item-card ${expandedItemId === item._id ? 'is-expanded' : ''}`}
                   variants={fadeUp}
                   initial="hidden"
                   whileInView="visible"
@@ -177,73 +218,101 @@ function Menu() {
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
                   <div className="image-card-body">
+                    <span className="mobile-card-kicker">Menu item</span>
                     <div className="menu-card-header">
                       <h4>{item.name}</h4>
                       <span className={`status-badge ${item.isAvailable === false ? 'danger' : 'success'}`}>
                         {item.isAvailable === false ? 'Unavailable' : 'Available'}
                       </span>
                     </div>
-                    <p>{item.description}</p>
+                    <p className="menu-item-description">{item.description}</p>
                     <div className="menu-card-price-row">
                       <p className="price">{item.price}</p>
                       <span className="menu-base-price">Base price</span>
                     </div>
-                    <div className="item-config-grid">
-                      <div>
-                        <label className="form-label">Serving Type</label>
-                        <select
-                          className="select"
-                          value={config.servingOption}
-                          onChange={(e) => updateItemConfig(item, { servingOption: e.target.value })}
+                    <div className="menu-card-actions">
+                      <button
+                        type="button"
+                        className="btn btn-outline menu-expand-btn"
+                        onClick={() => toggleExpandedItem(item._id)}
+                        aria-expanded={expandedItemId === item._id}
+                      >
+                        {expandedItemId === item._id ? 'Hide details' : 'Customize meal'}
+                        <FiChevronDown aria-hidden="true" />
+                      </button>
+                    </div>
+                    {expandedItemId === item._id && (
+                      <div className="menu-item-details">
+                        <div className="item-config-grid">
+                          <div>
+                            <label className="form-label">Serving Type</label>
+                            <select
+                              className="select"
+                              value={config.servingOption}
+                              onChange={(e) => updateItemConfig(item, { servingOption: e.target.value })}
+                            >
+                              {unitOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="form-label">Quantity</label>
+                            <input
+                              className="input"
+                              type="number"
+                              min="1"
+                              value={config.quantity}
+                              onChange={(e) =>
+                                updateItemConfig(item, {
+                                  quantity: Math.max(1, Number(e.target.value) || 1),
+                                })
+                              }
+                            />
+                          </div>
+                        </div>
+                        <div className="menu-card-summary">
+                          <div>
+                            <span className="profile-meta-label">Selected Serving</span>
+                            <strong>{selectedOption.label}</strong>
+                          </div>
+                          <div>
+                            <span className="profile-meta-label">Unit Price</span>
+                            <strong>{formatCurrency(estimated)}</strong>
+                          </div>
+                          <div>
+                            <span className="profile-meta-label">Subtotal</span>
+                            <strong>{formatCurrency(subtotal)}</strong>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-outline card-action-btn"
+                          onClick={() => handleAddToOrder(item)}
+                          disabled={item.isAvailable === false}
                         >
-                          {unitOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
+                          {item.isAvailable === false ? 'Unavailable' : 'Add to Order'}
+                        </button>
                       </div>
-                      <div>
-                        <label className="form-label">Quantity</label>
-                        <input
-                          className="input"
-                          type="number"
-                          min="1"
-                          value={config.quantity}
-                          onChange={(e) =>
-                            updateItemConfig(item, {
-                              quantity: Math.max(1, Number(e.target.value) || 1),
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
-                    <div className="menu-card-summary">
-                      <div>
-                        <span className="profile-meta-label">Selected Serving</span>
-                        <strong>{selectedOption.label}</strong>
-                      </div>
-                      <div>
-                        <span className="profile-meta-label">Unit Price</span>
-                        <strong>{formatCurrency(estimated)}</strong>
-                      </div>
-                      <div>
-                        <span className="profile-meta-label">Subtotal</span>
-                        <strong>{formatCurrency(subtotal)}</strong>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-outline card-action-btn"
-                      onClick={() => handleAddToOrder(item)}
-                      disabled={item.isAvailable === false}
-                    >
-                      {item.isAvailable === false ? 'Unavailable' : 'Add to Order'}
-                    </button>
+                    )}
                   </div>
                 </motion.div>
               )
             })}
+          </div>
+        )}
+
+        {itemCount > 0 && (
+          <div className="menu-mobile-checkout">
+            <div>
+              <span className="profile-meta-label">Ready to checkout</span>
+              <strong>{itemCount} item(s) in your basket</strong>
+            </div>
+            <Link className="btn" to="/order">
+              View Order
+            </Link>
           </div>
         )}
       </div>

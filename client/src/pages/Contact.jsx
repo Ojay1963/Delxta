@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { apiRequest } from '../utils/api'
+import { FiMail, FiMapPin, FiPhone } from 'react-icons/fi'
 import { FiFacebook, FiInstagram, FiYoutube } from 'react-icons/fi'
 import { FaXTwitter, FaTiktok } from 'react-icons/fa6'
 import brandLogoSrc from '../images/DELXTA_NO_BACKGROUND.jpg'
@@ -76,6 +77,30 @@ function Contact() {
               </a>
             </div>
           </div>
+
+          <div className="contact-mobile-summary" aria-label="Contact details">
+            <div className="contact-mobile-card">
+              <FiMapPin aria-hidden="true" />
+              <div>
+                <span className="profile-meta-label">Visit</span>
+                <strong>Lekki Phase 1, Lagos</strong>
+              </div>
+            </div>
+            <div className="contact-mobile-card">
+              <FiMail aria-hidden="true" />
+              <div>
+                <span className="profile-meta-label">Email</span>
+                <strong>hello@delxta.com</strong>
+              </div>
+            </div>
+            <div className="contact-mobile-card">
+              <FiPhone aria-hidden="true" />
+              <div>
+                <span className="profile-meta-label">Call</span>
+                <strong>+234 800 000 0000</strong>
+              </div>
+            </div>
+          </div>
         </div>
 
         <form className="form-card" onSubmit={handleSubmit}>
@@ -110,9 +135,15 @@ function Contact() {
             />
             {errors.message && <div className="form-error">{errors.message}</div>}
           </div>
-          <button className="btn" type="submit" disabled={status === 'loading'}>
-            {status === 'loading' ? 'Sending...' : 'Submit'}
-          </button>
+          <div className="contact-submit-row">
+            <div className="contact-submit-copy">
+              <span className="profile-meta-label">Message flow</span>
+              <strong>{status === 'loading' ? 'Sending to the Delxta team' : 'Reach the team directly'}</strong>
+            </div>
+            <button className="btn" type="submit" disabled={status === 'loading'}>
+              {status === 'loading' ? 'Sending...' : 'Submit'}
+            </button>
+          </div>
           {status === 'success' && (
             <div className="form-success">Message sent successfully.</div>
           )}

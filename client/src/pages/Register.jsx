@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { FiLock, FiMail, FiUserPlus } from 'react-icons/fi'
 import { useAuth } from '../context/AuthContext'
 
 function Register() {
@@ -38,8 +39,31 @@ function Register() {
 
   return (
     <section className="section">
-      <div className="container" style={{ maxWidth: '520px' }}>
-        <form className="form-card" onSubmit={handleSubmit}>
+      <div className="container auth-page-shell" style={{ maxWidth: '520px' }}>
+        <div className="auth-mobile-summary" aria-label="Registration overview">
+          <div className="auth-mobile-card">
+            <FiUserPlus aria-hidden="true" />
+            <div>
+              <span className="profile-meta-label">Account</span>
+              <strong>Create your Delxta profile</strong>
+            </div>
+          </div>
+          <div className="auth-mobile-card">
+            <FiMail aria-hidden="true" />
+            <div>
+              <span className="profile-meta-label">Verification</span>
+              <strong>Email confirmation comes next</strong>
+            </div>
+          </div>
+          <div className="auth-mobile-card">
+            <FiLock aria-hidden="true" />
+            <div>
+              <span className="profile-meta-label">Password</span>
+              <strong>Use 6 or more characters</strong>
+            </div>
+          </div>
+        </div>
+        <form className="form-card auth-form-card" onSubmit={handleSubmit}>
           <h3 style={{ marginTop: 0 }}>Create an Account</h3>
           <label className="form-label">Name</label>
           <input
@@ -112,9 +136,15 @@ function Register() {
             </button>
           </div>
           {error && <div className="form-error">{error}</div>}
-          <button className="btn" type="submit" disabled={loading} style={{ marginTop: '16px' }}>
-            {loading ? 'Creating...' : 'Register'}
-          </button>
+          <div className="auth-submit-row">
+            <div className="auth-submit-copy">
+              <span className="profile-meta-label">Next step</span>
+              <strong>{loading ? 'Creating your account' : 'Register and verify your email'}</strong>
+            </div>
+            <button className="btn" type="submit" disabled={loading} style={{ marginTop: '16px' }}>
+              {loading ? 'Creating...' : 'Register'}
+            </button>
+          </div>
           <p style={{ marginTop: '16px', color: 'var(--text-400)' }}>
             Already have an account? <Link to="/login">Login</Link>
           </p>

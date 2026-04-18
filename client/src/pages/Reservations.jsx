@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
+import { FiCalendar, FiClock, FiUsers } from 'react-icons/fi'
 import { apiRequest } from '../utils/api'
 import { useAuth } from '../context/AuthContext'
 
@@ -86,6 +87,30 @@ function Reservations() {
               <li>For groups larger than 10, please contact us directly.</li>
               <li>Dress code: Smart casual / traditional elegance.</li>
             </ul>
+          </div>
+
+          <div className="reservation-mobile-summary" aria-label="Reservation details">
+            <div className="reservation-mobile-card">
+              <FiUsers aria-hidden="true" />
+              <div>
+                <span className="profile-meta-label">Party size</span>
+                <strong>{form.guests} guest{form.guests === '1' ? '' : 's'}</strong>
+              </div>
+            </div>
+            <div className="reservation-mobile-card">
+              <FiCalendar aria-hidden="true" />
+              <div>
+                <span className="profile-meta-label">Date</span>
+                <strong>{form.date || 'Choose a day'}</strong>
+              </div>
+            </div>
+            <div className="reservation-mobile-card">
+              <FiClock aria-hidden="true" />
+              <div>
+                <span className="profile-meta-label">Time</span>
+                <strong>{form.time || 'Select time'}</strong>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -174,9 +199,15 @@ function Reservations() {
               placeholder="Allergies, special occasion, seating preference..."
             />
           </div>
-          <button className="btn" type="submit" disabled={status === 'loading'}>
-            {status === 'loading' ? 'Submitting...' : 'Confirm Reservation'}
-          </button>
+          <div className="reservation-submit-row">
+            <div className="reservation-submit-copy">
+              <span className="profile-meta-label">Reservation snapshot</span>
+              <strong>{form.guests} guest{form.guests === '1' ? '' : 's'} • {form.time || 'Select time'}</strong>
+            </div>
+            <button className="btn" type="submit" disabled={status === 'loading'}>
+              {status === 'loading' ? 'Submitting...' : 'Confirm Reservation'}
+            </button>
+          </div>
           {status === 'success' && (
             <div className="form-success">Reservation submitted successfully.</div>
           )}

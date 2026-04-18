@@ -46,6 +46,7 @@ body {
   min-width: 320px;
   background: var(--page-bg);
   color: var(--text-100);
+  overflow-x: hidden;
   overflow-wrap: anywhere;
   word-break: break-word;
 }

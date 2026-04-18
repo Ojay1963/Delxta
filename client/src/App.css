@@ -4,6 +4,10 @@
   min-height: 100vh;
 }
 
+.app-main {
+  flex: 1;
+}
+
 .container {
   width: min(1200px, 92%);
   margin: 0 auto;
@@ -102,6 +106,13 @@
   gap: 16px;
 }
 
+.nav-branding {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
 .logo-text {
   font-family: 'Cinzel', serif;
   font-size: 1.4rem;
@@ -129,6 +140,35 @@
 .brand-logo-fallback {
   display: inline-block;
   line-height: 1;
+}
+
+.mobile-page-summary,
+.mobile-tabbar {
+  display: none;
+}
+
+.mobile-page-summary {
+  min-width: 0;
+}
+
+.mobile-page-summary strong,
+.mobile-page-label {
+  display: block;
+}
+
+.mobile-page-label {
+  color: var(--text-400);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.mobile-page-summary strong {
+  font-size: 0.98rem;
+  color: var(--text-100);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nav-links {
@@ -171,6 +211,12 @@
   border: none;
   color: var(--text-100);
   font-size: 1.6rem;
+}
+
+.mobile-menu-shell,
+.mobile-menu-backdrop,
+.mobile-menu-close {
+  display: none;
 }
 
 .hero {
@@ -338,11 +384,11 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 22px;
-  margin-top: 40px;
+  margin-top: 28px;
 }
 
 .feature-grid-elevated {
-  margin-top: 54px;
+  margin-top: 34px;
 }
 
 .feature-card {
@@ -353,6 +399,19 @@
   text-align: center;
   border: 1px solid transparent;
   transition: border 0.2s ease, transform 0.2s ease;
+}
+
+.feature-card-top h4,
+.mobile-card-kicker {
+  margin-top: 0;
+}
+
+.feature-card-top h4 {
+  margin-bottom: 8px;
+}
+
+.feature-card-top p {
+  margin: 0;
 }
 
 .feature-card:hover {
@@ -406,14 +465,14 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
-  margin-top: 24px;
+  margin-top: 18px;
 }
 
 .planner-summary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
-  margin-top: 22px;
+  margin-top: 16px;
 }
 
 .planner-summary > div,
@@ -436,7 +495,7 @@
 }
 
 .planner-actions {
-  margin-top: 22px;
+  margin-top: 16px;
   align-items: stretch;
   flex-wrap: wrap;
 }
@@ -503,6 +562,19 @@
 .feature-card h4 {
   font-family: 'Cinzel', serif;
   margin: 14px 0 8px;
+}
+
+.mobile-home-actions,
+.mobile-section-head,
+.mobile-card-kicker {
+  display: none;
+}
+
+.mobile-card-kicker {
+  color: var(--accent-300);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
 }
 
 .video-section .section-subtitle {
@@ -683,7 +755,7 @@
 .whatsapp-float {
   position: fixed;
   right: clamp(16px, 2vw, 28px);
-  bottom: clamp(16px, 2vw, 28px);
+  bottom: clamp(88px, 11vw, 132px);
   width: 56px;
   height: 56px;
   border-radius: 50%;
@@ -735,7 +807,7 @@
 .team-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 24px;
+  gap: 18px;
 }
 
 .image-card {
@@ -769,7 +841,7 @@
 .split {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 34px;
+  gap: 24px;
   align-items: center;
 }
 
@@ -798,7 +870,7 @@
 .reviews {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 20px;
+  gap: 16px;
 }
 
 .review-card {
@@ -806,6 +878,18 @@
   padding: 22px;
   border-radius: 16px;
   box-shadow: var(--shadow-soft);
+}
+
+.home-section-tight {
+  padding: 56px 0;
+}
+
+.home-section-tight .section-title {
+  margin-bottom: 10px;
+}
+
+.home-section-tight .section-subtitle {
+  margin-bottom: 24px;
 }
 
 .review-meta {
@@ -823,7 +907,7 @@
 
 .cta {
   background: linear-gradient(135deg, rgba(214, 128, 31, 0.95), rgba(184, 94, 18, 0.95));
-  padding: 70px 0;
+  padding: 54px 0;
   text-align: center;
 }
 
@@ -858,6 +942,69 @@
   gap: 20px;
   flex-wrap: wrap;
   margin-bottom: 30px;
+}
+
+.menu-mobile-summary,
+.menu-mobile-checkout,
+.reservation-mobile-summary,
+.checkout-mobile-summary,
+.profile-mobile-summary,
+.auth-mobile-summary,
+.contact-mobile-summary,
+.about-mobile-summary {
+  display: none;
+}
+
+.menu-mobile-summary-card,
+.reservation-mobile-card,
+.checkout-mobile-card,
+.profile-mobile-summary-card,
+.auth-mobile-card,
+.contact-mobile-card,
+.about-mobile-card {
+  border-radius: 20px;
+  border: 1px solid var(--border-500);
+  background: rgba(255, 255, 255, 0.03);
+  min-width: 0;
+}
+
+.menu-mobile-summary-copy {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  flex: 1;
+}
+
+.menu-mobile-summary-copy strong,
+.menu-mobile-summary-copy .profile-meta-label {
+  min-width: 0;
+}
+
+.menu-mobile-summary-copy strong {
+  overflow-wrap: anywhere;
+}
+
+.menu-mobile-summary-icon {
+  flex: 0 0 auto;
+}
+
+.menu-mobile-category-select {
+  min-width: 0;
+  width: 100%;
+  padding-right: 36px;
+  font-weight: 700;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .menu-page {
@@ -911,6 +1058,38 @@
   flex-direction: column;
 }
 
+.menu-item-description {
+  margin: 0;
+  color: var(--text-300);
+}
+
+.menu-card-actions {
+  margin-top: 4px;
+}
+
+.menu-expand-btn {
+  width: 100%;
+  justify-content: space-between;
+  text-transform: none;
+  font-size: 0.92rem;
+  padding: 12px 18px;
+}
+
+.menu-expand-btn svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.2s ease;
+}
+
+.menu-item-card.is-expanded .menu-expand-btn svg {
+  transform: rotate(180deg);
+}
+
+.menu-item-details {
+  display: grid;
+  gap: 14px;
+}
+
 .menu-card-header,
 .menu-card-price-row {
   display: flex;
@@ -945,6 +1124,50 @@
   gap: 14px;
   margin-bottom: 20px;
   flex-wrap: wrap;
+}
+
+.reservation-submit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 22px;
+  flex-wrap: wrap;
+}
+
+.reservation-submit-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.checkout-submit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 22px;
+  flex-wrap: wrap;
+}
+
+.checkout-submit-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.auth-submit-row,
+.contact-submit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 22px;
+  flex-wrap: wrap;
+}
+
+.auth-submit-copy,
+.contact-submit-copy {
+  display: grid;
+  gap: 4px;
 }
 
 .item-config-grid {
@@ -1257,6 +1480,16 @@
 
 .profile-page {
   width: min(1320px, 96%);
+}
+
+.menu-page .menu-hero {
+  margin-bottom: 18px;
+}
+
+.menu-page .panel,
+.menu-page .image-card-body {
+  padding-top: 24px;
+  padding-bottom: 24px;
 }
 
 .profile-shell,
@@ -1716,6 +1949,10 @@
   background: rgba(240, 162, 59, 0.08);
 }
 
+.home-order-link {
+  width: fit-content;
+}
+
 .profile-inline-action {
   width: fit-content;
   text-decoration: none;
@@ -2001,6 +2238,24 @@
 }
 
 @media (max-width: 960px) {
+  .header {
+    position: relative;
+    top: auto;
+    background: transparent;
+    border-bottom: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .app-main {
+    padding: 10px 0 calc(108px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .nav {
+    padding: 10px 0 0;
+    align-items: flex-start;
+  }
+
   .nav-links {
     display: none;
   }
@@ -2015,19 +2270,191 @@
   }
 
   .nav-toggle {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .mobile-page-summary {
+    display: none;
+  }
+
+  .mobile-menu-shell {
     display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+  }
+
+  .mobile-menu-backdrop {
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: rgba(4, 4, 4, 0.62);
+    backdrop-filter: blur(8px);
   }
 
   .mobile-menu {
-    display: flex;
-    flex-direction: column;
+    position: relative;
+    z-index: 1;
+    display: grid;
     gap: 18px;
-    padding: 20px 0 30px;
+    width: min(100%, 560px);
+    margin: 10px auto 0;
+    padding: 22px;
+    border-radius: 30px 30px 22px 22px;
+    background:
+      radial-gradient(circle at top right, rgba(240, 162, 59, 0.14), transparent 34%),
+      linear-gradient(160deg, rgba(255, 255, 255, 0.05), transparent 45%),
+      rgba(23, 23, 23, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.42);
   }
 
+  .mobile-menu-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .mobile-menu-close {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 14px;
+    border: 1px solid var(--border-500);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-100);
+  }
+
+  .mobile-menu-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .mobile-menu .nav-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 56px;
+    padding: 12px 14px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: var(--text-100);
+    letter-spacing: 0.08em;
+  }
+
+  .mobile-menu .nav-link.active {
+    background: rgba(240, 162, 59, 0.12);
+    border-color: rgba(240, 162, 59, 0.38);
+  }
+
+  .mobile-menu-actions {
+    display: grid;
+    gap: 12px;
+  }
+
+  .mobile-menu-actions .btn {
+    width: 100%;
+  }
+
+  .mobile-tabbar {
+    position: fixed;
+    left: 50%;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    z-index: 30;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    width: min(94vw, 560px);
+    padding: 10px;
+    border-radius: 26px;
+    background:
+      linear-gradient(180deg, rgba(34, 34, 34, 0.96), rgba(18, 18, 18, 0.98));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(12px);
+  }
+
+  .whatsapp-float {
+    right: clamp(10px, 3vw, 18px);
+    bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    width: 46px;
+    height: 46px;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.3);
+  }
+
+  .whatsapp-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .mobile-tab-link {
+    display: grid;
+    place-items: center;
+    gap: 6px;
+    min-height: 62px;
+    padding: 8px 6px;
+    border-radius: 18px;
+    color: var(--text-400);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  }
+
+  .mobile-tab-link svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .mobile-tab-link.active {
+    color: var(--text-100);
+    background: linear-gradient(180deg, rgba(240, 162, 59, 0.22), rgba(240, 162, 59, 0.08));
+    box-shadow: inset 0 0 0 1px rgba(240, 162, 59, 0.2);
+  }
+
+  .mobile-tab-link span {
+    text-align: center;
+  }
+
+  .app-main .section,
+  .app-main .hero,
+  .app-main .cta {
+    position: relative;
+    width: min(100%, 720px);
+    margin: 0 auto 16px;
+    border-radius: 28px;
+    overflow: hidden;
+  }
+
+  .app-main .section,
+  .app-main .cta {
+    background:
+      linear-gradient(160deg, rgba(255, 255, 255, 0.02), transparent 50%),
+      rgba(18, 18, 18, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  .app-main .section {
+    padding: 34px 0;
+  }
+
+  .app-main .container {
+    width: min(100%, calc(100% - 32px));
+  }
 
   .hero {
-    padding: 100px 0 60px;
+    padding: 78px 0 42px;
     min-height: auto;
   }
 
@@ -2045,6 +2472,412 @@
   .menu-card-summary {
     grid-template-columns: 1fr;
     min-width: 0;
+  }
+
+  .menu-hero {
+    gap: 18px;
+  }
+
+  .menu-mobile-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0 0 18px;
+  }
+
+  .menu-mobile-summary-card,
+  .reservation-mobile-card,
+  .checkout-mobile-card,
+  .profile-mobile-summary-card,
+  .auth-mobile-card,
+  .contact-mobile-card,
+  .about-mobile-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    min-width: 0;
+  }
+
+  .menu-mobile-summary-card svg,
+  .reservation-mobile-card svg,
+  .checkout-mobile-card svg,
+  .profile-mobile-summary-card svg,
+  .auth-mobile-card svg,
+  .contact-mobile-card svg {
+    width: 18px;
+    height: 18px;
+    color: var(--accent-400);
+    flex: 0 0 auto;
+    margin-top: 3px;
+  }
+
+  .menu-inline-checkout {
+    display: none;
+  }
+
+  .menu-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .menu-item-card {
+    display: grid;
+    grid-template-columns: minmax(120px, 144px) minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .menu-item-card img {
+    height: 100%;
+    min-height: 220px;
+  }
+
+  .menu-item-card .image-card-body {
+    display: grid;
+    align-content: start;
+    gap: 10px;
+  }
+
+  .menu-item-details {
+    gap: 12px;
+  }
+
+  .menu-card-header h4,
+  .menu-card-price-row .price {
+    margin: 0;
+  }
+
+  .menu-mobile-checkout {
+    position: fixed;
+    left: 50%;
+    bottom: calc(94px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    z-index: 24;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: min(calc(100vw - 16px), 560px);
+    padding: 14px 16px;
+    border-radius: 22px;
+    background:
+      linear-gradient(180deg, rgba(33, 33, 33, 0.97), rgba(18, 18, 18, 0.98));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 36px rgba(0, 0, 0, 0.3);
+  }
+
+  .reservation-mobile-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+  }
+
+  .checkout-mobile-summary,
+  .profile-mobile-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0 0 18px;
+  }
+
+  .auth-mobile-summary,
+  .contact-mobile-summary,
+  .about-mobile-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0 0 18px;
+  }
+
+  .form-card {
+    border-radius: 24px;
+  }
+
+  .reservation-submit-row {
+    position: sticky;
+    bottom: calc(94px + env(safe-area-inset-bottom, 0px));
+    z-index: 5;
+    padding: 14px 16px;
+    border-radius: 22px;
+    background:
+      linear-gradient(180deg, rgba(33, 33, 33, 0.97), rgba(18, 18, 18, 0.98));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+  }
+
+  .reservation-submit-row .btn {
+    min-width: 200px;
+  }
+
+  .checkout-layout {
+    gap: 14px;
+  }
+
+  .checkout-layout > .panel,
+  .checkout-layout > .form-card {
+    border-radius: 24px;
+  }
+
+  .order-item {
+    grid-template-columns: minmax(0, 1fr) 84px;
+    gap: 12px;
+  }
+
+  .order-item .btn {
+    grid-column: 1 / -1;
+  }
+
+  .checkout-submit-row {
+    position: sticky;
+    bottom: calc(94px + env(safe-area-inset-bottom, 0px));
+    z-index: 5;
+    padding: 14px 16px;
+    border-radius: 22px;
+    background:
+      linear-gradient(180deg, rgba(33, 33, 33, 0.97), rgba(18, 18, 18, 0.98));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+  }
+
+  .checkout-submit-row .btn {
+    min-width: 220px;
+  }
+
+  .profile-sidebar {
+    order: 2;
+  }
+
+  .profile-main {
+    order: 1;
+  }
+
+  .profile-mobile-summary {
+    display: grid;
+  }
+
+  .profile-stats-grid,
+  .profile-quick-grid {
+    gap: 14px;
+  }
+
+  .profile-activity-card {
+    padding: 18px;
+    border-radius: 24px;
+  }
+
+  .profile-tabs-sticky {
+    position: sticky;
+    top: 10px;
+    z-index: 6;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    gap: 10px;
+    margin: 0 -4px;
+    padding: 10px 4px 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    background: linear-gradient(180deg, rgba(42, 42, 42, 0.96), rgba(27, 27, 27, 0.92));
+    border-radius: 20px;
+  }
+
+  .profile-tabs-sticky::-webkit-scrollbar {
+    display: none;
+  }
+
+  .profile-tabs-sticky .profile-tab {
+    flex: 0 0 auto;
+  }
+
+  .auth-page-shell {
+    display: grid;
+    gap: 14px;
+  }
+
+  .auth-form-card {
+    border-radius: 24px;
+  }
+
+  .auth-submit-row,
+  .contact-submit-row {
+    position: sticky;
+    bottom: calc(94px + env(safe-area-inset-bottom, 0px));
+    z-index: 5;
+    padding: 14px 16px;
+    border-radius: 22px;
+    background:
+      linear-gradient(180deg, rgba(33, 33, 33, 0.97), rgba(18, 18, 18, 0.98));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+  }
+
+  .auth-submit-row .btn,
+  .contact-submit-row .btn {
+    min-width: 200px;
+  }
+
+  .about-mobile-intro {
+    display: none;
+  }
+
+  .hero-layout {
+    gap: 18px;
+  }
+
+  .hero-content {
+    display: grid;
+    gap: 16px;
+  }
+
+  .hero-content > .pill,
+  .hero-content > h1,
+  .hero-content > p {
+    margin: 0;
+  }
+
+  .mobile-home-actions {
+    position: sticky;
+    top: 10px;
+    z-index: 6;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    padding: 10px;
+    border-radius: 22px;
+    background:
+      linear-gradient(180deg, rgba(34, 34, 34, 0.94), rgba(18, 18, 18, 0.96));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(12px);
+  }
+
+  .mobile-home-action {
+    display: grid;
+    place-items: center;
+    gap: 6px;
+    min-height: 68px;
+    padding: 10px 8px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-100);
+    font-weight: 600;
+  }
+
+  .mobile-home-action.is-primary {
+    background: linear-gradient(180deg, rgba(240, 162, 59, 0.28), rgba(240, 162, 59, 0.12));
+    border-color: rgba(240, 162, 59, 0.35);
+  }
+
+  .mobile-home-action svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .hero-status-row {
+    order: 2;
+  }
+
+  .hero-actions {
+    display: none;
+  }
+
+  .hero-spotlight {
+    order: 3;
+  }
+
+  .feature-grid.feature-grid-elevated {
+    margin-top: 16px;
+    display: grid;
+    gap: 14px;
+  }
+
+  .feature-card {
+    padding: 18px;
+    text-align: left;
+    border-radius: 22px;
+  }
+
+  .feature-card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .feature-icon {
+    margin: 0;
+    flex: 0 0 auto;
+  }
+
+  .experience-shell,
+  .split,
+  .selection-grid,
+  .reviews {
+    gap: 12px;
+  }
+
+  .experience-stack {
+    order: -1;
+  }
+
+  .experience-note,
+  .image-card,
+  .review-card,
+  .video-card,
+  .address-card,
+  .planner-card {
+    border-radius: 24px;
+  }
+
+  .video-card {
+    display: grid;
+    gap: 16px;
+    max-width: none;
+  }
+
+  .mobile-section-head {
+    display: block;
+  }
+
+  .mobile-section-head .section-title,
+  .mobile-section-head .section-subtitle {
+    text-align: left;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .video-section > .container > .section-title,
+  .video-section > .container > .section-subtitle {
+    display: none;
+  }
+
+  .selection-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .selection-grid .image-card {
+    display: grid;
+    grid-template-columns: minmax(110px, 132px) minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .selection-grid .image-card img {
+    height: 100%;
+    min-height: 160px;
+  }
+
+  .selection-grid .image-card-body {
+    display: grid;
+    align-content: start;
+    gap: 8px;
+  }
+
+  .mobile-card-kicker {
+    display: inline-block;
+  }
+
+  .cta {
+    padding: 38px 0;
   }
 
   .profile-layout {
@@ -2133,13 +2966,31 @@
   .item-config-grid {
     grid-template-columns: 1fr;
   }
+
+  .footer {
+    display: none;
+  }
 }
 
 @media (max-width: 600px) {
+  .app-main {
+    padding-top: 10px;
+    padding-bottom: calc(106px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .nav {
+    padding-top: 6px;
+  }
+
+  .brand-link {
+    gap: 8px;
+  }
+
   .hero {
     background-position: center center;
-    background-size: contain;
-    min-height: 72vh;
+    background-size: cover;
+    min-height: auto;
+    padding: 72px 0 36px;
   }
 
   .brand-logo-image {
@@ -2147,8 +2998,12 @@
     height: 46px;
   }
 
+  .brand-logo-fallback {
+    display: none;
+  }
+
   .hero h1 {
-    font-size: 2.6rem;
+    font-size: 2.2rem;
   }
 
   .hero-actions,
@@ -2160,6 +3015,120 @@
 
   .section {
     padding: 70px 0;
+  }
+
+  .app-main .section,
+  .app-main .hero,
+  .app-main .cta {
+    border-radius: 24px;
+    margin-bottom: 14px;
+  }
+
+  .home-section-tight {
+    padding: 32px 0;
+  }
+
+  .mobile-home-actions {
+    grid-template-columns: 1fr;
+    top: 6px;
+  }
+
+  .mobile-home-action {
+    grid-template-columns: 18px 1fr;
+    grid-auto-flow: column;
+    justify-content: start;
+    min-height: 56px;
+    padding: 10px 14px;
+  }
+
+  .mobile-menu {
+    width: calc(100% - 16px);
+    padding: 18px;
+    border-radius: 26px 26px 20px 20px;
+  }
+
+  .whatsapp-float {
+    right: 10px;
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    width: 42px;
+    height: 42px;
+  }
+
+  .whatsapp-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .menu-mobile-summary,
+  .reservation-mobile-summary,
+  .checkout-mobile-summary,
+  .profile-mobile-summary,
+  .auth-mobile-summary,
+  .contact-mobile-summary,
+  .about-mobile-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .menu-item-card,
+  .selection-grid .image-card {
+    grid-template-columns: 1fr;
+  }
+
+  .menu-item-card img,
+  .selection-grid .image-card img {
+    min-height: 180px;
+  }
+
+  .menu-page .panel,
+  .menu-page .image-card-body {
+    padding-top: 20px;
+    padding-bottom: 20px;
+  }
+
+  .menu-mobile-checkout,
+  .reservation-submit-row,
+  .checkout-submit-row,
+  .auth-submit-row,
+  .contact-submit-row {
+    width: 100%;
+    max-width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reservation-submit-row,
+  .checkout-submit-row,
+  .auth-submit-row,
+  .contact-submit-row {
+    bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .reservation-submit-row .btn,
+  .checkout-submit-row .btn,
+  .auth-submit-row .btn,
+  .contact-submit-row .btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .about-mobile-intro {
+    display: block;
+    padding-top: 0;
+  }
+
+  .mobile-menu-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mobile-tabbar {
+    width: calc(100vw - 16px);
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .mobile-tab-link {
+    min-height: 58px;
+    font-size: 0.68rem;
   }
 
   .profile-identity-card,

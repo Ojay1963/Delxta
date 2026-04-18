@@ -6,7 +6,7 @@ function Layout() {
   return (
     <div className="app">
       <Header />
-      <main>
+      <main className="app-main">
         <Outlet />
       </main>
       <Footer />

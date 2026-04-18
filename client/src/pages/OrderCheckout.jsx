@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { FiCreditCard, FiMapPin, FiShoppingBag } from 'react-icons/fi'
 import { apiRequest } from '../utils/api'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
@@ -210,6 +211,30 @@ function OrderCheckout() {
         <p className="section-subtitle">Delivery details, payment option, and final confirmation.</p>
         <div className="panel" style={{ marginBottom: '16px' }}>
           <strong>Checkout Steps:</strong> 1) Order Summary 2) Delivery Information 3) Payment Method 4) Place Order
+        </div>
+
+        <div className="checkout-mobile-summary" aria-label="Checkout overview">
+          <div className="checkout-mobile-card">
+            <FiShoppingBag aria-hidden="true" />
+            <div>
+              <span className="profile-meta-label">Items</span>
+              <strong>{items.length} in basket</strong>
+            </div>
+          </div>
+          <div className="checkout-mobile-card">
+            <FiMapPin aria-hidden="true" />
+            <div>
+              <span className="profile-meta-label">Delivery</span>
+              <strong>{form.deliveryType === 'home_delivery' ? 'Home delivery' : 'Pickup'}</strong>
+            </div>
+          </div>
+          <div className="checkout-mobile-card">
+            <FiCreditCard aria-hidden="true" />
+            <div>
+              <span className="profile-meta-label">Total</span>
+              <strong>{formatCurrency(total)}</strong>
+            </div>
+          </div>
         </div>
 
         <div className="checkout-layout">
@@ -458,19 +483,32 @@ function OrderCheckout() {
               />
             </div>
 
-            <button className="btn" type="submit" disabled={status === 'loading'}>
-              {status === 'loading'
-                ? form.paymentMethod === 'card'
-                  ? 'Processing Card...'
-                  : form.paymentMethod === 'cash_on_delivery'
-                    ? 'Placing Order...'
-                  : 'Redirecting to Paystack...'
-                : form.paymentMethod === 'card'
-                  ? `Pay ${formatCurrency(total)}`
-                  : form.paymentMethod === 'cash_on_delivery'
-                    ? `Place Order (${formatCurrency(total)})`
-                    : `Pay ${formatCurrency(total)}`}
-            </button>
+            <div className="checkout-submit-row">
+              <div className="checkout-submit-copy">
+                <span className="profile-meta-label">Payment summary</span>
+                <strong>
+                  {form.paymentMethod === 'cash_on_delivery'
+                    ? 'Cash on delivery'
+                    : form.paymentMethod === 'card'
+                      ? 'Card payment'
+                      : 'Paystack checkout'}
+                </strong>
+                <span>{formatCurrency(total)}</span>
+              </div>
+              <button className="btn" type="submit" disabled={status === 'loading'}>
+                {status === 'loading'
+                  ? form.paymentMethod === 'card'
+                    ? 'Processing Card...'
+                    : form.paymentMethod === 'cash_on_delivery'
+                      ? 'Placing Order...'
+                    : 'Redirecting to Paystack...'
+                  : form.paymentMethod === 'card'
+                    ? `Pay ${formatCurrency(total)}`
+                    : form.paymentMethod === 'cash_on_delivery'
+                      ? `Place Order (${formatCurrency(total)})`
+                      : `Pay ${formatCurrency(total)}`}
+              </button>
+            </div>
 
             {errors.items && <div className="form-error">{errors.items}</div>}
             {errors.submit && <div className="form-error">{errors.submit}</div>}

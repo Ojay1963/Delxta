@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   FaArrowRight,
@@ -11,7 +11,10 @@ import {
   FaWhatsapp,
 } from 'react-icons/fa'
 import { useAuth } from '../context/AuthContext'
+import { useCart } from '../context/CartContext'
 import { atmosphere, chefSelections, features, reviews } from '../data/content'
+import { apiRequest } from '../utils/api'
+import { findUnitOption } from '../utils/servingUnits'
 import resturantHero from '../images/Resturant-hero.jpg'
 
 const fadeUp = {
@@ -99,8 +102,11 @@ function getServiceStatus(now) {
 
 function Home() {
   const { user } = useAuth()
+  const { addItem } = useCart()
+  const navigate = useNavigate()
   const [isMapOpen, setIsMapOpen] = useState(false)
   const [copiedAddress, setCopiedAddress] = useState(false)
+  const [quickOrderItem, setQuickOrderItem] = useState('')
   const [serviceStatus, setServiceStatus] = useState(() => getServiceStatus(new Date()))
   const [planner, setPlanner] = useState(() => {
     const tomorrow = new Date()
@@ -119,6 +125,8 @@ function Home() {
     ['Location', 'Victoria Island, Lagos'],
     ['Experience', 'Reservations, events, and fast ordering'],
   ]
+  const featuredSelections = chefSelections.slice(0, 3)
+  const featuredReviews = reviews.slice(0, 3)
 
   const availableDates = useMemo(() => {
     const dates = []
@@ -184,6 +192,30 @@ function Home() {
     }
   }
 
+  const handleFeaturedOrder = async (dishName) => {
+    setQuickOrderItem(dishName)
+
+    try {
+      const data = await apiRequest('/api/menu')
+      const matchedItem = (data.items || []).find(
+        (item) => String(item.name || '').trim().toLowerCase() === dishName.trim().toLowerCase()
+      )
+
+      if (!matchedItem) {
+        navigate('/menu')
+        return
+      }
+
+      const defaultOption = findUnitOption(matchedItem)
+      addItem(matchedItem, defaultOption, 1)
+      navigate('/order')
+    } catch {
+      navigate('/menu')
+    } finally {
+      setQuickOrderItem('')
+    }
+  }
+
   return (
     <>
       <section
@@ -206,6 +238,21 @@ function Home() {
                 A sharper Delxta landing experience with richer hospitality cues, clearer service
                 flow, and faster paths into reservations, contact, and ordering.
               </p>
+
+              <div className="mobile-home-actions" aria-label="Mobile quick actions">
+                <Link className="mobile-home-action is-primary" to={plannerLink}>
+                  <FaCalendarAlt aria-hidden="true" />
+                  <span>Reserve</span>
+                </Link>
+                <Link className="mobile-home-action" to="/menu">
+                  <FaArrowRight aria-hidden="true" />
+                  <span>Menu</span>
+                </Link>
+                <button type="button" className="mobile-home-action" onClick={() => setIsMapOpen(true)}>
+                  <FaRegCompass aria-hidden="true" />
+                  <span>Directions</span>
+                </button>
+              </div>
 
               <div className="hero-status-row">
                 <div className={`service-status ${serviceStatus.isOpen ? 'open' : ''}`}>
@@ -274,16 +321,20 @@ function Home() {
                 whileInView="visible"
                 viewport={{ once: true }}
               >
-                <div className="feature-icon" aria-hidden="true">{feature.icon}</div>
-                <h4>{feature.title}</h4>
-                <p>{feature.description}</p>
+                <div className="feature-card-top">
+                  <div className="feature-icon" aria-hidden="true">{feature.icon}</div>
+                  <div>
+                    <h4>{feature.title}</h4>
+                    <p>{feature.description}</p>
+                  </div>
+                </div>
               </Motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="section section-compact" id="plan-visit">
+      <section className="section section-compact home-section-tight" id="plan-visit">
         <div className="container">
           <div className="experience-shell">
             <Motion.div
@@ -419,27 +470,7 @@ function Home() {
         </div>
       </section>
 
-      <section className="section video-section" id="watch-video">
-        <div className="container">
-          <h2 className="section-title">Watch the Experience</h2>
-          <p className="section-subtitle">
-            A quick look at Delxta&apos;s ambiance and signature moments.
-          </p>
-          <div className="video-card">
-            <div className="video-frame">
-              <iframe
-                src="https://www.youtube.com/embed/Fr1ntCGCehA"
-                title="Delxta Experience"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                referrerPolicy="strict-origin-when-cross-origin"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="section">
+      <section className="section home-section-tight">
         <div className="container split visit-section">
           <Motion.div
             variants={fadeUp}
@@ -510,7 +541,7 @@ function Home() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section home-section-tight">
         <div className="container">
           <div className="section-heading-row">
             <div>
@@ -524,7 +555,7 @@ function Home() {
             </Link>
           </div>
           <div className="selection-grid">
-            {chefSelections.map((item) => (
+            {featuredSelections.map((item) => (
               <Motion.div
                 key={item.title}
                 className="image-card"
@@ -535,12 +566,18 @@ function Home() {
               >
                 <img src={item.image} alt={item.title} />
                 <div className="image-card-body">
+                  <span className="mobile-card-kicker">Chef pick</span>
                   <h4>{item.title}</h4>
                   <p>{item.description}</p>
                   <p className="price">{item.price}</p>
-                  <Link className="profile-inline-link profile-inline-action" to="/menu">
-                    Order this dish
-                  </Link>
+                  <button
+                    type="button"
+                    className="profile-inline-link profile-inline-action home-order-link"
+                    onClick={() => handleFeaturedOrder(item.title)}
+                    disabled={quickOrderItem === item.title}
+                  >
+                    {quickOrderItem === item.title ? 'Adding...' : 'Order this dish'}
+                  </button>
                 </div>
               </Motion.div>
             ))}
@@ -548,7 +585,7 @@ function Home() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section home-section-tight">
         <div className="container split">
           <Motion.div
             variants={fadeUp}
@@ -588,14 +625,14 @@ function Home() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section home-section-tight">
         <div className="container">
           <h2 className="section-title">Guest Reviews</h2>
           <p className="section-subtitle">
             Real impressions from guests who came for the food and stayed for the overall experience.
           </p>
           <div className="reviews">
-            {reviews.map((review) => (
+            {featuredReviews.map((review) => (
               <Motion.div
                 key={review.name}
                 className="review-card"

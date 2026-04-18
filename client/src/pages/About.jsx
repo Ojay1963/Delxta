@@ -41,6 +41,25 @@ function About() {
         </div>
       </section>
 
+      <section className="section about-mobile-intro">
+        <div className="container">
+          <div className="about-mobile-summary">
+            <div className="about-mobile-card">
+              <span className="profile-meta-label">Story</span>
+              <strong>Nigerian roots with global polish</strong>
+            </div>
+            <div className="about-mobile-card">
+              <span className="profile-meta-label">Experience</span>
+              <strong>15+ years of hospitality craft</strong>
+            </div>
+            <div className="about-mobile-card">
+              <span className="profile-meta-label">Focus</span>
+              <strong>Culture, innovation, and fine ingredients</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="section-compact">
         <div className="container panel">
           <h2 className="section-title">Our Core Values</h2>
