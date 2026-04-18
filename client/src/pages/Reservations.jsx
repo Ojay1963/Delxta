@@ -14,6 +14,28 @@ const initialState = {
   requests: '',
 }
 
+const serviceWindows = [
+  { start: '12:00', end: '16:00' },
+  { start: '18:00', end: '23:00' },
+]
+
+const toMinutes = (value) => {
+  const [hours, minutes] = String(value || '').split(':').map(Number)
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null
+  return hours * 60 + minutes
+}
+
+const isWithinServiceHours = (value) => {
+  const totalMinutes = toMinutes(value)
+  if (totalMinutes === null) return false
+
+  return serviceWindows.some((window) => {
+    const start = toMinutes(window.start)
+    const end = toMinutes(window.end)
+    return totalMinutes >= start && totalMinutes <= end
+  })
+}
+
 function Reservations() {
   const { token, user } = useAuth()
   const location = useLocation()
@@ -42,6 +64,9 @@ function Reservations() {
     if (!/^\d{11}$/.test(values.phone.trim())) next.phone = 'Phone number must be exactly 11 digits'
     if (!values.date) next.date = 'Select a date'
     if (!values.time) next.time = 'Select a time'
+    if (values.time && !isWithinServiceHours(values.time)) {
+      next.time = 'Choose a time within service hours: 12:00-16:00 or 18:00-23:00.'
+    }
     return next
   }
 
@@ -175,18 +200,14 @@ function Reservations() {
             </div>
             <div>
               <label className="form-label">Time</label>
-              <select
-                className="select"
+              <input
+                className="input"
+                type="time"
+                step="900"
                 value={form.time}
                 onChange={(e) => setForm({ ...form, time: e.target.value })}
-              >
-                <option value="">Select Time</option>
-                {['18:00', '19:00', '20:00', '21:00'].map((slot) => (
-                  <option key={slot} value={slot}>
-                    {slot}
-                  </option>
-                ))}
-              </select>
+              />
+              <p className="profile-field-note">Service hours: 12:00-16:00 and 18:00-23:00.</p>
               {errors.time && <div className="form-error">{errors.time}</div>}
             </div>
           </div>

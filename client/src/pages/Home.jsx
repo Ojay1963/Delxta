@@ -62,14 +62,6 @@ function formatDateInput(date) {
   return date.toISOString().split('T')[0]
 }
 
-function formatDisplayDate(date) {
-  return new Intl.DateTimeFormat('en-NG', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  }).format(date)
-}
-
 function getServiceStatus(now) {
   const currentHour = now.getHours() + now.getMinutes() / 60
 
@@ -128,24 +120,9 @@ function Home() {
   const featuredSelections = chefSelections.slice(0, 3)
   const featuredReviews = reviews.slice(0, 3)
 
-  const availableDates = useMemo(() => {
-    const dates = []
-    const start = new Date()
-
-    for (let index = 0; index < 6; index += 1) {
-      const nextDate = new Date(start)
-      nextDate.setDate(start.getDate() + index + 1)
-      dates.push({
-        value: formatDateInput(nextDate),
-        label: formatDisplayDate(nextDate),
-      })
-    }
-
-    return dates
-  }, [])
-
   const selectedOccasion = plannerOptions.occasion.find((option) => option.value === planner.occasion)
   const selectedSeating = plannerOptions.seating.find((option) => option.value === planner.seating)
+  const minimumPlannerDate = useMemo(() => formatDateInput(new Date()), [])
   const plannerSearch = useMemo(() => {
     const params = new URLSearchParams({
       guests: planner.guests,
@@ -395,13 +372,13 @@ function Home() {
                 </label>
                 <label>
                   <span className="form-label">Preferred date</span>
-                  <select className="select" value={planner.date} onChange={handlePlannerChange('date')}>
-                    {availableDates.map((date) => (
-                      <option key={date.value} value={date.value}>
-                        {date.label}
-                      </option>
-                    ))}
-                  </select>
+                  <input
+                    className="input"
+                    type="date"
+                    min={minimumPlannerDate}
+                    value={planner.date}
+                    onChange={handlePlannerChange('date')}
+                  />
                 </label>
               </div>
 

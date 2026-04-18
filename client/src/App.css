@@ -2248,7 +2248,7 @@
   }
 
   .app-main {
-    padding: 10px 0 calc(108px + env(safe-area-inset-bottom, 0px));
+    padding: 10px 0 calc(94px + env(safe-area-inset-bottom, 0px));
   }
 
   .nav {
@@ -2288,6 +2288,9 @@
     position: fixed;
     inset: 0;
     z-index: 35;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .mobile-menu-backdrop {
@@ -2306,6 +2309,9 @@
     width: min(100%, 560px);
     margin: 10px auto 0;
     padding: 22px;
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     border-radius: 30px 30px 22px 22px;
     background:
       radial-gradient(circle at top right, rgba(240, 162, 59, 0.14), transparent 34%),
@@ -2370,7 +2376,7 @@
   .mobile-tabbar {
     position: fixed;
     left: 50%;
-    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(4px + env(safe-area-inset-bottom, 0px));
     transform: translateX(-50%);
     z-index: 30;
     display: grid;
@@ -2975,7 +2981,7 @@
 @media (max-width: 600px) {
   .app-main {
     padding-top: 10px;
-    padding-bottom: calc(106px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
   }
 
   .nav {
@@ -3044,6 +3050,7 @@
   .mobile-menu {
     width: calc(100% - 16px);
     padding: 18px;
+    max-height: calc(100vh - 16px);
     border-radius: 26px 26px 20px 20px;
   }
 
